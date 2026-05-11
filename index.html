@@ -1,0 +1,875 @@
+import React, { useState, useRef, useEffect } from ‘react’;
+
+export default function FaceIDAuth() {
+const videoRef = useRef(null);
+const canvasRef = useRef(null);
+const [mode, setMode] = useState(‘login’); // ‘login’, ‘enroll’, ‘success’
+const [status, setStatus] = useState(‘initializing’);
+const [message, setMessage] = useState(‘Loading face detection models…’);
+const [enrolledUsers, setEnrolledUsers] = useState({});
+const [currentUser, setCurrentUser] = useState(’’);
+const [faceDetected, setFaceDetected] = useState(false);
+const [similarity, setSimilarity] = useState(0);
+const [enrollmentProgress, setEnrollmentProgress] = useState(0);
+const modelsLoadedRef = useRef(false);
+const detectionIntervalRef = useRef(null);
+const enrollmentCounterRef = useRef(0);
+const windowRef = useRef(typeof window !== ‘undefined’ ? window : {});
+
+// Load models on mount
+useEffect(() => {
+const loadModels = async () => {
+try {
+// Load face-api library
+const script = document.createElement(‘script’);
+script.src = ‘https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js’;
+script.async = true;
+
+```
+    script.onload = async () => {
+      try {
+        // Load detection models
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+        await Promise.all([
+          windowRef.current.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          windowRef.current.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          windowRef.current.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+        modelsLoadedRef.current = true;
+        setStatus('ready');
+        setMessage('Camera ready. Click "Start" to begin.');
+        
+        // Load enrolled users from storage
+        const stored = localStorage.getItem('faceIdUsers');
+        if (stored) {
+          setEnrolledUsers(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.error('Model loading error:', err);
+        setStatus('error');
+        setMessage('Failed to load detection models. Please refresh.');
+      }
+    };
+    
+    script.onerror = () => {
+      setStatus('error');
+      setMessage('Failed to load face-api library.');
+    };
+    
+    document.head.appendChild(script);
+  } catch (error) {
+    console.error('Setup error:', error);
+    setStatus('error');
+    setMessage('Setup failed. Please refresh the page.');
+  }
+};
+
+loadModels();
+```
+
+}, []);
+
+// Initialize camera when mode changes
+useEffect(() => {
+if (status !== ‘ready’) return;
+
+```
+const initCamera = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        width: { ideal: 640 }, 
+        height: { ideal: 480 },
+        facingMode: 'user'
+      }
+    });
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.onloadedmetadata = () => {
+        if (canvasRef.current) {
+          canvasRef.current.width = videoRef.current.videoWidth;
+          canvasRef.current.height = videoRef.current.videoHeight;
+        }
+        startFaceDetection();
+      };
+    }
+  } catch (error) {
+    setStatus('error');
+    setMessage('Camera access denied. Please allow camera permissions.');
+  }
+};
+
+if (mode !== 'login' || (status === 'ready' && !videoRef.current?.srcObject)) {
+  initCamera();
+}
+
+return () => {
+  if (detectionIntervalRef.current) {
+    clearInterval(detectionIntervalRef.current);
+  }
+};
+```
+
+}, [status, mode]);
+
+// Face detection loop
+const startFaceDetection = () => {
+if (detectionIntervalRef.current) {
+clearInterval(detectionIntervalRef.current);
+}
+
+```
+detectionIntervalRef.current = setInterval(async () => {
+  if (!videoRef.current || !canvasRef.current || !modelsLoadedRef.current || !windowRef.current.faceapi) {
+    return;
+  }
+
+  try {
+    const detections = await windowRef.current.faceapi
+      .detectAllFaces(videoRef.current, new windowRef.current.faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptors();
+
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+    if (detections.length > 0) {
+      setFaceDetected(true);
+      const detection = detections[0];
+      const box = detection.detection.box;
+
+      // Draw face detection box
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+      // Draw corner markers
+      const cornerSize = 20;
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 2;
+      
+      // Top-left
+      ctx.strokeRect(box.x, box.y, cornerSize, cornerSize);
+      // Top-right
+      ctx.strokeRect(box.x + box.width - cornerSize, box.y, cornerSize, cornerSize);
+      // Bottom-left
+      ctx.strokeRect(box.x, box.y + box.height - cornerSize, cornerSize, cornerSize);
+      // Bottom-right
+      ctx.strokeRect(box.x + box.width - cornerSize, box.y + box.height - cornerSize, cornerSize, cornerSize);
+
+      // Scanning animation
+      const time = Date.now() % 1500;
+      const scanY = box.y + (box.height * (time / 1500));
+      ctx.strokeStyle = 'rgba(0, 255, 136, 0.5)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(box.x, scanY, box.width, 8);
+
+      if (mode === 'enroll') {
+        handleEnrollment(detection);
+      } else if (mode === 'authenticate') {
+        handleAuthentication(detection);
+      }
+    } else {
+      setFaceDetected(false);
+      setSimilarity(0);
+      if (mode === 'enroll') {
+        setMessage('Position your face in the frame');
+      }
+    }
+  } catch (error) {
+    console.error('Detection error:', error);
+  }
+}, 100);
+```
+
+};
+
+const handleEnrollment = (detection) => {
+if (!detection.descriptor) return;
+
+```
+if (faceDetected) {
+  enrollmentCounterRef.current += 1;
+  const progress = Math.min((enrollmentCounterRef.current / 30) * 100, 100);
+  setEnrollmentProgress(progress);
+
+  if (enrollmentCounterRef.current >= 30) {
+    // Save enrollment
+    const descriptor = Array.from(detection.descriptor);
+    const updated = {
+      ...enrolledUsers,
+      [currentUser]: descriptor
+    };
+    setEnrolledUsers(updated);
+    localStorage.setItem('faceIdUsers', JSON.stringify(updated));
+    
+    enrollmentCounterRef.current = 0;
+    setEnrollmentProgress(0);
+    setMode('success');
+    setMessage(`✓ Face registered for ${currentUser}!`);
+    
+    setTimeout(() => {
+      setMode('login');
+      setCurrentUser('');
+      setMessage('Successfully enrolled! You can now log in.');
+    }, 2000);
+  } else {
+    setMessage(`Enrolling... ${Math.floor(progress)}%`);
+  }
+}
+```
+
+};
+
+const handleAuthentication = (detection) => {
+if (!detection.descriptor || Object.keys(enrolledUsers).length === 0) return;
+
+```
+let bestMatch = { name: '', distance: 1 };
+
+Object.entries(enrolledUsers).forEach(([name, enrolledDescriptor]) => {
+  const distance = windowRef.current.faceapi.euclideanDistance(
+    detection.descriptor,
+    new Float32Array(enrolledDescriptor)
+  );
+
+  if (distance < bestMatch.distance) {
+    bestMatch = { name, distance };
+  }
+});
+
+const sim = Math.max(0, 1 - bestMatch.distance);
+setSimilarity(sim);
+
+if (sim > 0.6 && bestMatch.name) {
+  setMode('success');
+  setMessage(`✓ Authentication Successful! Welcome, ${bestMatch.name}!`);
+  setTimeout(() => {
+    setMode('login');
+    setMessage('Logged out. Face detection ready.');
+  }, 3000);
+} else if (faceDetected) {
+  setMessage(Object.keys(enrolledUsers).length === 0 
+    ? 'No enrolled users. Create a Face ID first.' 
+    : 'Face not recognized. Try again or enroll.');
+}
+```
+
+};
+
+const startEnrollment = () => {
+if (!currentUser.trim()) {
+setMessage(‘Please enter a name to register.’);
+return;
+}
+if (enrolledUsers[currentUser]) {
+setMessage(‘This name is already registered. Use a different name.’);
+return;
+}
+setMode(‘enroll’);
+enrollmentCounterRef.current = 0;
+setEnrollmentProgress(0);
+setMessage(‘Keep your face in the frame to register…’);
+};
+
+const startAuthentication = () => {
+if (Object.keys(enrolledUsers).length === 0) {
+setMessage(‘No enrolled users. Please create a Face ID first.’);
+return;
+}
+setMode(‘authenticate’);
+setSimilarity(0);
+setMessage(‘Look at the camera to authenticate…’);
+};
+
+const resetSystem = () => {
+setEnrolledUsers({});
+localStorage.removeItem(‘faceIdUsers’);
+setCurrentUser(’’);
+setMode(‘login’);
+setMessage(‘All face data cleared. System reset.’);
+};
+
+const deleteUser = (name) => {
+const updated = { …enrolledUsers };
+delete updated[name];
+setEnrolledUsers(updated);
+localStorage.setItem(‘faceIdUsers’, JSON.stringify(updated));
+setMessage(`${name} has been deleted.`);
+};
+
+return (
+<div style={styles.container}>
+<div style={styles.background} />
+
+```
+  <div style={styles.content}>
+    <div style={styles.header}>
+      <div style={styles.logo}>
+        <div style={styles.logoIcon}>🔐</div>
+        <h1 style={styles.title}>FaceID</h1>
+      </div>
+      <p style={styles.subtitle}>Biometric Authentication</p>
+    </div>
+
+    {mode !== 'login' && (
+      <div style={styles.cameraSection}>
+        <div style={styles.videoContainer}>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            style={styles.video}
+          />
+          <canvas
+            ref={canvasRef}
+            style={styles.canvas}
+          />
+          <div style={{
+            ...styles.scanlineOverlay,
+            opacity: faceDetected ? 0.2 : 0.05
+          }} />
+        </div>
+
+        <div style={styles.statusPanel}>
+          <div style={{
+            ...styles.statusDot,
+            backgroundColor: faceDetected ? '#00ff88' : '#666',
+            boxShadow: faceDetected ? '0 0 12px #00ff88' : 'none'
+          }} />
+          <span style={styles.statusText}>
+            {faceDetected ? 'Face Detected' : 'Waiting...'}
+          </span>
+          {similarity > 0.3 && (
+            <div style={styles.similarityBar}>
+              <div style={{
+                ...styles.similarityFill,
+                width: `${similarity * 100}%`,
+                background: similarity > 0.6 
+                  ? 'linear-gradient(90deg, #00ff88, #00ff88)' 
+                  : 'linear-gradient(90deg, #ffaa00, #ffaa00)'
+              }} />
+            </div>
+          )}
+        </div>
+
+        {enrollmentProgress > 0 && (
+          <div style={styles.enrollmentBar}>
+            <div style={{
+              ...styles.enrollmentFill,
+              width: `${enrollmentProgress}%`
+            }} />
+            <span style={styles.enrollmentText}>{Math.floor(enrollmentProgress)}%</span>
+          </div>
+        )}
+
+        <div style={styles.messageBox}>
+          <p style={styles.message}>{message}</p>
+        </div>
+
+        <button
+          onClick={() => setMode('login')}
+          style={styles.backButton}
+        >
+          ← Back to Menu
+        </button>
+      </div>
+    )}
+
+    {mode === 'login' && (
+      <div style={styles.loginSection}>
+        <div style={styles.formCard}>
+          <h2 style={styles.cardTitle}>Create New Face ID</h2>
+          <input
+            type="text"
+            placeholder="Enter your name"
+            value={currentUser}
+            onChange={(e) => setCurrentUser(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && startEnrollment()}
+            style={styles.input}
+          />
+          <button
+            onClick={startEnrollment}
+            style={styles.enrollButton}
+          >
+            Register Face
+          </button>
+        </div>
+
+        {Object.keys(enrolledUsers).length > 0 && (
+          <>
+            <div style={styles.divider} />
+            
+            <div style={styles.formCard}>
+              <h2 style={styles.cardTitle}>Authenticate</h2>
+              <button
+                onClick={startAuthentication}
+                style={styles.authButton}
+              >
+                Start Face Authentication
+              </button>
+            </div>
+
+            <div style={styles.usersCard}>
+              <h3 style={styles.usersTitle}>Enrolled Users ({Object.keys(enrolledUsers).length})</h3>
+              <div style={styles.usersList}>
+                {Object.keys(enrolledUsers).map(name => (
+                  <div key={name} style={styles.userItem}>
+                    <span style={styles.userName}>👤 {name}</span>
+                    <button
+                      onClick={() => deleteUser(name)}
+                      style={styles.deleteButton}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={resetSystem}
+                style={styles.resetButton}
+              >
+                Clear All Data
+              </button>
+            </div>
+          </>
+        )}
+
+        <div style={styles.infoBox}>
+          <h3 style={styles.infoTitle}>ℹ️ How It Works</h3>
+          <ul style={styles.infoList}>
+            <li><strong>Register:</strong> Enter name and hold face in frame (3 seconds)</li>
+            <li><strong>Authenticate:</strong> Look at camera to verify identity</li>
+            <li><strong>Secure:</strong> All data stored locally, never sent to servers</li>
+            <li><strong>Fast:</strong> Real-time facial recognition with instant feedback</li>
+          </ul>
+        </div>
+
+        {status === 'error' && (
+          <div style={styles.errorBox}>
+            <p style={styles.errorText}>{message}</p>
+          </div>
+        )}
+      </div>
+    )}
+
+    {mode === 'success' && (
+      <div style={styles.successOverlay}>
+        <div style={styles.successContent}>
+          <div style={styles.successIcon}>✓</div>
+          <p style={styles.successMessage}>{message}</p>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
+```
+
+);
+}
+
+const styles = {
+container: {
+minHeight: ‘100vh’,
+display: ‘flex’,
+alignItems: ‘center’,
+justifyContent: ‘center’,
+fontFamily: ‘“Segoe UI”, system-ui, -apple-system, sans-serif’,
+background: ‘#0a0e27’,
+position: ‘relative’,
+padding: ‘20px’,
+},
+background: {
+position: ‘fixed’,
+top: 0,
+left: 0,
+right: 0,
+bottom: 0,
+background: `radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(100, 200, 255, 0.04) 0%, transparent 50%)`,
+pointerEvents: ‘none’,
+},
+content: {
+position: ‘relative’,
+zIndex: 1,
+maxWidth: ‘600px’,
+width: ‘100%’,
+},
+header: {
+textAlign: ‘center’,
+marginBottom: ‘36px’,
+},
+logo: {
+display: ‘flex’,
+alignItems: ‘center’,
+justifyContent: ‘center’,
+gap: ‘12px’,
+marginBottom: ‘8px’,
+},
+logoIcon: {
+fontSize: ‘36px’,
+},
+title: {
+color: ‘#00ff88’,
+fontSize: ‘36px’,
+fontWeight: ‘800’,
+margin: 0,
+letterSpacing: ‘3px’,
+},
+subtitle: {
+color: ‘#888’,
+fontSize: ‘12px’,
+margin: ‘8px 0 0 0’,
+letterSpacing: ‘1.5px’,
+textTransform: ‘uppercase’,
+},
+cameraSection: {
+animation: ‘fadeIn 0.4s ease’,
+},
+videoContainer: {
+position: ‘relative’,
+borderRadius: ‘12px’,
+overflow: ‘hidden’,
+border: ‘3px solid rgba(0, 255, 136, 0.3)’,
+boxShadow: ‘0 0 50px rgba(0, 255, 136, 0.15), inset 0 0 30px rgba(0, 255, 136, 0.03)’,
+marginBottom: ‘20px’,
+aspectRatio: ‘4/3’,
+backgroundColor: ‘#000’,
+},
+video: {
+width: ‘100%’,
+height: ‘100%’,
+display: ‘block’,
+objectFit: ‘cover’,
+},
+canvas: {
+position: ‘absolute’,
+top: 0,
+left: 0,
+width: ‘100%’,
+height: ‘100%’,
+},
+scanlineOverlay: {
+position: ‘absolute’,
+top: 0,
+left: 0,
+right: 0,
+bottom: 0,
+background: ‘repeating-linear-gradient(0deg, rgba(0, 255, 136, 0.02) 0px, transparent 1px)’,
+pointerEvents: ‘none’,
+},
+statusPanel: {
+display: ‘flex’,
+alignItems: ‘center’,
+gap: ‘10px’,
+padding: ‘12px 16px’,
+backgroundColor: ‘rgba(0, 255, 136, 0.05)’,
+borderRadius: ‘8px’,
+border: ‘1px solid rgba(0, 255, 136, 0.15)’,
+marginBottom: ‘16px’,
+},
+statusDot: {
+width: ‘10px’,
+height: ‘10px’,
+borderRadius: ‘50%’,
+transition: ‘all 0.2s ease’,
+},
+statusText: {
+color: ‘#00ff88’,
+fontSize: ‘12px’,
+fontWeight: ‘600’,
+flex: 1,
+},
+similarityBar: {
+width: ‘80px’,
+height: ‘4px’,
+backgroundColor: ‘rgba(0, 255, 136, 0.1)’,
+borderRadius: ‘2px’,
+overflow: ‘hidden’,
+},
+similarityFill: {
+height: ‘100%’,
+transition: ‘width 0.1s ease’,
+},
+enrollmentBar: {
+position: ‘relative’,
+width: ‘100%’,
+height: ‘8px’,
+backgroundColor: ‘rgba(0, 255, 136, 0.1)’,
+borderRadius: ‘4px’,
+overflow: ‘hidden’,
+marginBottom: ‘16px’,
+},
+enrollmentFill: {
+height: ‘100%’,
+background: ‘linear-gradient(90deg, #00ff88, #00ff88)’,
+boxShadow: ‘0 0 10px rgba(0, 255, 136, 0.5)’,
+transition: ‘width 0.2s ease’,
+},
+enrollmentText: {
+position: ‘absolute’,
+right: ‘8px’,
+top: ‘-22px’,
+color: ‘#00ff88’,
+fontSize: ‘11px’,
+fontWeight: ‘700’,
+},
+messageBox: {
+padding: ‘12px 16px’,
+backgroundColor: ‘rgba(100, 200, 255, 0.05)’,
+border: ‘1px solid rgba(100, 200, 255, 0.15)’,
+borderRadius: ‘8px’,
+marginBottom: ‘16px’,
+minHeight: ‘20px’,
+},
+message: {
+color: ‘#64c8ff’,
+fontSize: ‘12px’,
+margin: 0,
+fontWeight: ‘500’,
+},
+backButton: {
+width: ‘100%’,
+padding: ‘12px’,
+backgroundColor: ‘rgba(100, 150, 200, 0.1)’,
+color: ‘#64c8ff’,
+border: ‘1px solid rgba(100, 150, 200, 0.2)’,
+borderRadius: ‘8px’,
+fontSize: ‘13px’,
+fontWeight: ‘600’,
+cursor: ‘pointer’,
+transition: ‘all 0.2s ease’,
+},
+loginSection: {
+animation: ‘fadeIn 0.4s ease’,
+},
+formCard: {
+padding: ‘24px’,
+backgroundColor: ‘rgba(255, 255, 255, 0.03)’,
+border: ‘1px solid rgba(0, 255, 136, 0.15)’,
+borderRadius: ‘12px’,
+marginBottom: ‘20px’,
+},
+cardTitle: {
+color: ‘#00ff88’,
+fontSize: ‘16px’,
+fontWeight: ‘700’,
+margin: ‘0 0 16px 0’,
+letterSpacing: ‘0.5px’,
+},
+input: {
+width: ‘100%’,
+padding: ‘12px 14px’,
+backgroundColor: ‘rgba(255, 255, 255, 0.05)’,
+border: ‘1px solid rgba(0, 255, 136, 0.25)’,
+borderRadius: ‘8px’,
+color: ‘#fff’,
+fontSize: ‘13px’,
+fontWeight: ‘500’,
+marginBottom: ‘12px’,
+outline: ‘none’,
+boxSizing: ‘border-box’,
+transition: ‘all 0.2s ease’,
+},
+enrollButton: {
+width: ‘100%’,
+padding: ‘12px’,
+backgroundColor: ‘#00ff88’,
+color: ‘#0a0e27’,
+border: ‘none’,
+borderRadius: ‘8px’,
+fontSize: ‘13px’,
+fontWeight: ‘700’,
+cursor: ‘pointer’,
+transition: ‘all 0.2s ease’,
+letterSpacing: ‘0.5px’,
+boxShadow: ‘0 0 15px rgba(0, 255, 136, 0.25)’,
+},
+authButton: {
+width: ‘100%’,
+padding: ‘12px’,
+backgroundColor: ‘rgba(0, 255, 136, 0.15)’,
+color: ‘#00ff88’,
+border: ‘2px solid rgba(0, 255, 136, 0.4)’,
+borderRadius: ‘8px’,
+fontSize: ‘13px’,
+fontWeight: ‘700’,
+cursor: ‘pointer’,
+transition: ‘all 0.2s ease’,
+},
+divider: {
+height: ‘1px’,
+background: ‘linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.2), transparent)’,
+margin: ‘24px 0’,
+},
+usersCard: {
+padding: ‘20px’,
+backgroundColor: ‘rgba(255, 255, 255, 0.02)’,
+border: ‘1px solid rgba(0, 255, 136, 0.1)’,
+borderRadius: ‘12px’,
+marginBottom: ‘20px’,
+},
+usersTitle: {
+color: ‘#00ff88’,
+fontSize: ‘13px’,
+fontWeight: ‘700’,
+margin: ‘0 0 12px 0’,
+textTransform: ‘uppercase’,
+letterSpacing: ‘0.5px’,
+},
+usersList: {
+display: ‘flex’,
+flexDirection: ‘column’,
+gap: ‘8px’,
+marginBottom: ‘12px’,
+},
+userItem: {
+display: ‘flex’,
+alignItems: ‘center’,
+justifyContent: ‘space-between’,
+padding: ‘10px 12px’,
+backgroundColor: ‘rgba(0, 255, 136, 0.05)’,
+borderRadius: ‘6px’,
+border: ‘1px solid rgba(0, 255, 136, 0.08)’,
+},
+userName: {
+color: ‘#ccc’,
+fontSize: ‘12px’,
+fontWeight: ‘500’,
+},
+deleteButton: {
+padding: ‘4px 12px’,
+backgroundColor: ‘rgba(255, 100, 100, 0.15)’,
+color: ‘#ff6464’,
+border: ‘1px solid rgba(255, 100, 100, 0.2)’,
+borderRadius: ‘4px’,
+fontSize: ‘11px’,
+fontWeight: ‘600’,
+cursor: ‘pointer’,
+transition: ‘all 0.2s ease’,
+},
+resetButton: {
+width: ‘100%’,
+padding: ‘8px’,
+backgroundColor: ‘rgba(255, 100, 100, 0.1)’,
+color: ‘#ff6464’,
+border: ‘1px solid rgba(255, 100, 100, 0.25)’,
+borderRadius: ‘6px’,
+fontSize: ‘11px’,
+fontWeight: ‘600’,
+cursor: ‘pointer’,
+transition: ‘all 0.2s ease’,
+},
+infoBox: {
+padding: ‘20px’,
+backgroundColor: ‘rgba(255, 255, 255, 0.02)’,
+border: ‘1px solid rgba(100, 200, 255, 0.1)’,
+borderRadius: ‘12px’,
+marginTop: ‘20px’,
+},
+infoTitle: {
+color: ‘#64c8ff’,
+fontSize: ‘12px’,
+fontWeight: ‘700’,
+margin: ‘0 0 10px 0’,
+textTransform: ‘uppercase’,
+letterSpacing: ‘0.5px’,
+},
+infoList: {
+color: ‘#888’,
+fontSize: ‘11px’,
+lineHeight: ‘1.8’,
+margin: 0,
+paddingLeft: ‘16px’,
+},
+errorBox: {
+padding: ‘12px 16px’,
+backgroundColor: ‘rgba(255, 100, 100, 0.1)’,
+border: ‘1px solid rgba(255, 100, 100, 0.2)’,
+borderRadius: ‘8px’,
+marginTop: ‘16px’,
+},
+errorText: {
+color: ‘#ff6464’,
+fontSize: ‘12px’,
+margin: 0,
+fontWeight: ‘500’,
+},
+successOverlay: {
+position: ‘fixed’,
+top: 0,
+left: 0,
+right: 0,
+bottom: 0,
+display: ‘flex’,
+alignItems: ‘center’,
+justifyContent: ‘center’,
+backgroundColor: ‘rgba(10, 14, 39, 0.95)’,
+zIndex: 1000,
+animation: ‘fadeIn 0.3s ease’,
+},
+successContent: {
+textAlign: ‘center’,
+},
+successIcon: {
+fontSize: ‘80px’,
+color: ‘#00ff88’,
+marginBottom: ‘20px’,
+animation: ‘bounce 0.6s ease’,
+},
+successMessage: {
+color: ‘#00ff88’,
+fontSize: ‘18px’,
+fontWeight: ‘600’,
+margin: 0,
+letterSpacing: ‘0.5px’,
+},
+};
+
+// Add global styles and animations
+if (typeof document !== ‘undefined’) {
+const style = document.createElement(‘style’);
+style.textContent = `
+@keyframes fadeIn {
+from {
+opacity: 0;
+transform: translateY(10px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+
+```
+@keyframes bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+input:focus {
+  border-color: rgba(0, 255, 136, 0.5) !important;
+  background-color: rgba(0, 255, 136, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+```
+
+`;
+document.head.appendChild(style);
+}
