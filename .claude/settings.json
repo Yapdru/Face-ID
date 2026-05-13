@@ -1,0 +1,1 @@
+{"permissions":{"allow":["Bash(git log *)","Bash(git status)","Bash(git diff *)","Bash(grep *)","Bash(find *)","Bash(cat)","Bash(gh pr view *)"]}}
