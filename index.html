@@ -270,6 +270,16 @@
       opacity:0.92;
     }
 
+    button:focus-visible {
+      outline:2px solid #0a7ea4;
+      outline-offset:2px;
+    }
+
+    input:focus-visible, textarea:focus-visible {
+      outline:2px solid #0a7ea4;
+      outline-offset:1px;
+    }
+
     @media(prefers-color-scheme:dark){
       button {
         box-shadow:0 8px 24px rgba(10,126,164,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
@@ -463,6 +473,12 @@
       transform:translateX(6px) scale(0.98);
     }
 
+    .menu-item:focus-visible {
+      outline:2px solid #0a7ea4;
+      outline-offset:-4px;
+      border-radius:10px;
+    }
+
     .divider {
       height:1px;
       background:#eee;
@@ -515,6 +531,13 @@
     }
 
     .users-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(80px,1fr));
+      gap:8px;
+      padding:4px;
+    }
+
+    .users {
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(70px,1fr));
       gap:10px;
