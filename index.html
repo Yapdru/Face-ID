@@ -1570,19 +1570,27 @@
 
       if(noseX!==undefined){
         const dist=Math.sqrt((noseX-cx)**2+(noseY-cy)**2);
-        const centered=dist<=80;
+        const centered=dist<=CONFIG.CENTER_THRESHOLD;
+        const progress=Math.max(0,1-(dist/CONFIG.CENTER_THRESHOLD));
+
         x.beginPath();
-        x.arc(noseX,noseY,centered?14:10,0,Math.PI*2);
-        x.fillStyle=centered?'rgba(48,209,88,0.75)':'rgba(255,200,50,0.7)';
+        x.arc(noseX,noseY,centered?16:12,0,Math.PI*2);
+        x.fillStyle=centered?'rgba(48,209,88,0.8)':'rgba(255,200,50,0.75)';
         x.fill();
-        x.strokeStyle='rgba(255,255,255,0.9)';
+        x.strokeStyle='rgba(255,255,255,0.95)';
         x.lineWidth=2.5;
         x.stroke();
+
         if(centered){
           x.beginPath();
-          x.arc(noseX,noseY,22,0,Math.PI*2);
-          x.strokeStyle='rgba(48,209,88,0.3)';
-          x.lineWidth=1.5;
+          x.arc(noseX,noseY,28,0,Math.PI*2*progress);
+          x.strokeStyle='rgba(48,209,88,0.5)';
+          x.lineWidth=4;
+          x.stroke();
+          x.beginPath();
+          x.arc(noseX,noseY,24,0,Math.PI*2);
+          x.strokeStyle='rgba(48,209,88,0.2)';
+          x.lineWidth=1;
           x.stroke();
         }
       }
@@ -1597,7 +1605,10 @@
         if(m!==MODE.ENROLL)x.clearRect(0,0,c.width,c.height);
 
         if(!dets.length){
-          if(m===MODE.ENROLL)drawFaceGuide();
+          if(m===MODE.ENROLL){
+            drawFaceGuide();
+            set_msg('👤 Center face · move in circle · blink');
+          }
           return;
         }
         if(!dets[0]||!dets[0].descriptor||dets[0].descriptor.length!==128)return;
