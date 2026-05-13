@@ -2,13 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="Premium biometric authentication with Face ID and passcode">
+    <meta name="apple-mobile-web-app-title" content="Face ID">
+    <meta name="theme-color" content="#0a7ea4">
+    <meta name="description" content="Premium biometric authentication with Face ID, Touch ID, and Passcode">
+    <meta name="color-scheme" content="light dark">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a7ea4' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>🔐</text></svg>">
     <title>Face ID Premium</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @supports (padding: max(0px)) {
+            html { --safe-top: max(20px, env(safe-area-inset-top)); --safe-bottom: max(20px, env(safe-area-inset-bottom)); --safe-left: max(20px, env(safe-area-inset-left)); --safe-right: max(20px, env(safe-area-inset-right)); }
+        }
+        html { --safe-top: 20px; --safe-bottom: 20px; --safe-left: 20px; --safe-right: 20px; }
 
         :root {
             --primary: #0a7ea4;
@@ -21,25 +30,44 @@
             --glass-bg: rgba(255,255,255,0.62);
             --glass-blur: blur(48px) saturate(200%) brightness(1.06);
             --border-light: rgba(255,255,255,0.75);
+            --radius: 30px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text: #f3f4f6;
+                --text-light: #d1d5db;
+                --glass-bg: rgba(30,30,40,0.7);
+                --glass-blur: blur(48px) saturate(150%) brightness(0.95);
+                --border-light: rgba(255,255,255,0.2);
+            }
+            body { background: linear-gradient(145deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #0d1f2d 100%); }
         }
 
         html, body {
             min-height: 100%;
             background: linear-gradient(145deg, #cde8f5 0%, #d8eef7 40%, #dde8f8 70%, #c8e0f4 100%);
             color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', sans-serif;
             -webkit-font-smoothing: antialiased;
             text-rendering: optimizeLegibility;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         body {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
             min-height: 100vh;
             position: relative;
             overflow: hidden;
+        }
+
+        /* ── Dynamic Island awareness ── */
+        @supports (padding: env(safe-area-inset-top)) {
+            body { padding-top: max(var(--safe-top), env(safe-area-inset-top)); }
         }
 
         /* ── Animated liquid blobs ── */
@@ -77,7 +105,9 @@
 
         /* ── Sun button ── */
         .sun {
-            position: fixed; top: 20px; right: 20px;
+            position: fixed;
+            top: var(--safe-top);
+            right: var(--safe-right);
             width: 54px; height: 54px;
             background: rgba(255,255,255,0.65);
             backdrop-filter: var(--glass-blur);
@@ -93,6 +123,8 @@
             z-index: 200;
             will-change: transform;
             user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
         }
         .sun:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.95); }
         .sun:active { transform: scale(0.95); }
@@ -105,7 +137,9 @@
 
         /* ── Sun dropdown menu ── */
         .sun-menu {
-            position: fixed; top: 82px; right: 20px;
+            position: fixed;
+            top: calc(var(--safe-top) + 70px);
+            right: var(--safe-right);
             z-index: 199;
             background: rgba(255,255,255,0.72);
             backdrop-filter: var(--glass-blur);
@@ -115,6 +149,7 @@
             padding: 10px;
             box-shadow: 0 24px 64px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.95);
             min-width: 210px;
+            max-width: 90vw;
             transform: translateY(-8px) scale(0.94);
             opacity: 0; pointer-events: none;
             transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s;
@@ -133,6 +168,9 @@
             font-size: 0.9rem; font-weight: 600; color: var(--text);
             cursor: pointer; transition: background 0.18s;
             font-family: inherit; text-align: left;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
         }
         .sun-menu-item:hover { background: rgba(10,126,164,0.1); }
         .sun-menu-item:active { transform: scale(0.98); }
@@ -140,29 +178,30 @@
 
         /* ── Main glass card ── */
         .card {
-            max-width: 520px; width: 100%;
+            max-width: 520px;
+            width: calc(100vw - 2 * var(--safe-left));
+            max-height: calc(100vh - 2 * var(--safe-top) - 40px);
             background: var(--glass-bg);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
-            border-radius: 30px;
+            border-radius: var(--radius);
             border: 1px solid var(--border-light);
             box-shadow:
                 0 24px 64px rgba(0,0,0,0.1),
                 inset 0 1.5px 0 rgba(255,255,255,0.95),
                 inset 0 -1px 0 rgba(0,0,0,0.04);
-            padding: 40px;
+            padding: clamp(20px, 5vw, 40px);
             text-align: center;
             animation: slideUp 0.65s cubic-bezier(0.34,1.56,0.64,1);
             position: relative;
             will-change: transform;
             transform: translateZ(0);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
-        .card::after {
-            content: '';
-            position: absolute; inset: 0;
-            border-radius: 30px;
-            background: linear-gradient(160deg, rgba(255,255,255,0.18) 0%, transparent 50%);
-            pointer-events: none;
+
+        @media (max-width: 480px) {
+            .card { border-radius: 28px; }
         }
 
         @keyframes slideUp {
@@ -171,11 +210,12 @@
         }
 
         .logo {
-            width: 64px; height: 64px;
+            width: clamp(56px, 12vw, 64px);
+            height: clamp(56px, 12vw, 64px);
             background: linear-gradient(135deg, rgba(10,126,164,0.88), rgba(63,185,212,0.88));
             backdrop-filter: blur(12px);
             border-radius: 20px;
-            font-size: 2rem;
+            font-size: clamp(1.6rem, 4vw, 2rem);
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 16px;
             box-shadow: 0 8px 28px rgba(10,126,164,0.35), inset 0 1px 0 rgba(255,255,255,0.35);
@@ -188,12 +228,21 @@
             to   { transform: scale(1); opacity: 1; }
         }
 
-        h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
-        .subtitle { font-size: 0.9rem; color: var(--text-light); margin-bottom: 20px; }
+        h1 {
+            font-size: clamp(1.6rem, 5vw, 2rem);
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: clamp(0.85rem, 2.5vw, 0.9rem);
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
 
         #msg {
             height: 20px; min-height: 20px;
-            color: var(--primary); font-weight: 500; font-size: 0.9rem;
+            color: var(--primary); font-weight: 500; font-size: clamp(0.8rem, 2vw, 0.9rem);
             margin: 16px 0; animation: msgFade 0.3s ease;
         }
 
@@ -207,6 +256,8 @@
             position: relative; border-radius: 22px; overflow: hidden;
             margin-bottom: 24px; background: #000; display: none;
             aspect-ratio: 4/3;
+            max-height: 50vh;
+            max-width: 100%;
             box-shadow: 0 12px 40px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.12);
             animation: videoSlide 0.4s cubic-bezier(0.34,1.56,0.64,1);
         }
@@ -226,7 +277,8 @@
         }
 
         .guide-circle {
-            width: 140px; height: 140px;
+            width: clamp(120px, 25vw, 140px);
+            height: clamp(120px, 25vw, 140px);
             border: 2px solid rgba(16,185,129,0.35);
             border-radius: 50%;
             backdrop-filter: blur(2px);
@@ -247,14 +299,6 @@
         @keyframes pulseGreen {
             0%,100% { transform: scale(1); }
             50% { transform: scale(1.05); }
-        }
-
-        .angle-indicator {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            pointer-events: none;
         }
 
         .angle-dot {
@@ -314,7 +358,10 @@
             box-shadow: 0 4px 16px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.95);
             transition: transform 0.25s;
             display: flex; align-items: center; justify-content: center;
-            border: none; font-family: inherit; font-weight: 600;
+            font-family: inherit; font-weight: 600;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
         }
         .flip-btn:hover { transform: scale(1.1); }
         .flip-btn:active { transform: scale(0.95); }
@@ -322,7 +369,7 @@
         /* ── Controls ── */
         .controls { display: flex; flex-direction: column; gap: 12px; }
 
-        input {
+        input, textarea {
             padding: 12px 16px; font-size: 1rem;
             border-radius: 14px;
             border: 1px solid rgba(255,255,255,0.65);
@@ -331,9 +378,11 @@
             color: var(--text); outline: none; width: 100%;
             font-family: inherit; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.05), 0 1px 0 rgba(255,255,255,0.85);
+            -webkit-appearance: none;
+            appearance: none;
         }
         input::placeholder { color: var(--text-light); }
-        input:focus {
+        input:focus, textarea:focus {
             border-color: rgba(10,126,164,0.45);
             background: rgba(255,255,255,0.78);
             box-shadow: 0 0 0 3px rgba(10,126,164,0.1), inset 0 1px 3px rgba(0,0,0,0.04);
@@ -349,6 +398,12 @@
             box-shadow: 0 4px 18px rgba(10,126,164,0.28), inset 0 1px 0 rgba(255,255,255,0.28);
             transition: transform 0.25s, box-shadow 0.25s;
             font-family: inherit;
+            -webkit-appearance: none;
+            appearance: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+            min-height: 44px;
+            min-width: 44px;
         }
         button:hover {
             transform: translateY(-2px);
@@ -365,7 +420,11 @@
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
         }
         .enrolled-users-title { font-size: 0.78rem; font-weight: 700; color: var(--success); text-transform: uppercase; margin-bottom: 8px; }
-        .users-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px,1fr)); gap: 8px; }
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(clamp(70px, 20vw, 80px), 1fr));
+            gap: 8px;
+        }
         .user-chip {
             background: rgba(255,255,255,0.78);
             backdrop-filter: blur(10px);
@@ -375,6 +434,8 @@
             cursor: pointer; transition: background 0.2s, border-color 0.2s;
             position: relative; overflow: hidden;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.95);
+            touch-action: manipulation;
+            -webkit-appearance: none;
         }
         .user-chip:hover { background: rgba(16,185,129,0.12); border-color: var(--success); }
         .user-chip .del {
@@ -384,6 +445,7 @@
             border: none; border-radius: 50%; font-size: 0.7rem;
             cursor: pointer; opacity: 0; transition: opacity 0.2s;
             display: flex; align-items: center; justify-content: center;
+            -webkit-appearance: none;
         }
         .user-chip:hover .del { opacity: 1; }
 
@@ -411,6 +473,7 @@
             display: flex; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none;
             transition: opacity 0.3s;
+            padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
         }
         .modal-overlay.open { opacity: 1; pointer-events: all; }
 
@@ -418,25 +481,21 @@
             background: rgba(255,255,255,0.78);
             backdrop-filter: blur(56px) saturate(220%) brightness(1.08);
             -webkit-backdrop-filter: blur(56px) saturate(220%) brightness(1.08);
-            border-radius: 30px;
+            border-radius: var(--radius);
             border: 1px solid var(--border-light);
             box-shadow:
                 0 32px 80px rgba(0,0,0,0.18),
                 inset 0 1.5px 0 rgba(255,255,255,0.98),
                 inset 0 -1px 0 rgba(0,0,0,0.04);
-            padding: 32px;
-            max-width: 360px; width: 90%;
+            padding: clamp(24px, 5vw, 32px);
+            max-width: 360px; width: calc(100vw - 2 * var(--safe-left));
             text-align: center;
             position: relative;
             transform: scale(0.9) translateY(20px);
             transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        .modal::after {
-            content: '';
-            position: absolute; inset: 0;
-            border-radius: 30px;
-            background: linear-gradient(160deg, rgba(255,255,255,0.2) 0%, transparent 55%);
-            pointer-events: none;
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .modal-overlay.open .modal { transform: scale(1) translateY(0); }
 
@@ -459,6 +518,7 @@
         .pin-display {
             display: flex; justify-content: center; gap: 14px;
             margin-bottom: 24px;
+            flex-wrap: wrap;
         }
         .pin-dot {
             width: 16px; height: 16px; border-radius: 50%;
@@ -474,12 +534,12 @@
         }
 
         .pin-grid {
-            display: grid; grid-template-columns: repeat(3,1fr);
+            display: grid; grid-template-columns: repeat(3, minmax(60px, 1fr));
             gap: 10px; margin-bottom: 16px;
         }
         .pin-btn-wrap { display: flex; justify-content: center; }
         .pin-btn {
-            width: 68px; aspect-ratio: 1; border-radius: 50%;
+            width: min(70px, 20vw); aspect-ratio: 1; border-radius: 50%;
             background: rgba(255,255,255,0.68);
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--border-light);
@@ -488,9 +548,14 @@
             cursor: pointer; font-family: inherit;
             display: flex; align-items: center; justify-content: center;
             transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+            -webkit-appearance: none;
+            appearance: none;
+            min-height: 44px;
+            min-width: 44px;
+            touch-action: manipulation;
         }
         .pin-btn:hover { background: rgba(10,126,164,0.1); transform: scale(1.06); }
-        .pin-btn:active { transform: scale(0.94); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        .pin-btn:active { transform: scale(0.94); }
         .pin-btn.del-btn { font-size: 1.1rem; color: var(--danger); }
         .pin-btn.confirm-btn {
             background: linear-gradient(135deg, rgba(10,126,164,0.82), rgba(63,185,212,0.82));
@@ -513,11 +578,12 @@
             font-size: 0.72rem; font-family: 'SF Mono','Fira Code','Courier New',monospace;
             word-break: break-all; color: var(--text-light);
             max-height: 100px; overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             text-align: left; margin-bottom: 12px;
         }
 
-        .btn-row { display: flex; gap: 10px; }
-        .btn-row button { flex: 1; }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-row button { flex: 1; min-width: 100px; }
         .btn-secondary {
             background: rgba(107,114,128,0.12) !important;
             color: var(--text) !important;
@@ -534,19 +600,8 @@
         }
 
         textarea {
-            width: 100%; height: 80px;
-            border-radius: 14px;
-            border: 1px solid rgba(0,0,0,0.09);
-            padding: 10px; font-size: 0.8rem;
-            font-family: 'SF Mono','Fira Code','Courier New',monospace;
-            background: rgba(255,255,255,0.65);
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            resize: none; outline: none; color: var(--text);
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        textarea:focus {
-            border-color: rgba(10,126,164,0.4);
-            box-shadow: 0 0 0 3px rgba(10,126,164,0.1);
+            height: 80px;
+            resize: none; outline: none;
         }
 
         .confidence-meter {
@@ -554,6 +609,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .confidence-label {
@@ -565,6 +621,7 @@
 
         .confidence-bar {
             flex: 1;
+            min-width: 100px;
             height: 6px;
             background: rgba(10,126,164,0.1);
             border-radius: 3px;
@@ -578,13 +635,57 @@
             transition: width 0.3s ease;
         }
 
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--warning);
+            animation: statusPulse 2s ease-in-out infinite;
+            margin-left: 4px;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .hidden { display: none !important; }
 
-        @media (max-width: 480px) {
-            .card { padding: 28px 20px; }
-            h1 { font-size: 1.6rem; }
-            .pin-btn { width: 58px; }
-            .logo { width: 56px; height: 56px; font-size: 1.7rem; }
+        /* iPad landscape optimization */
+        @media (min-width: 1024px) and (min-height: 600px) {
+            .card {
+                max-width: 580px;
+                padding: 48px;
+            }
+            h1 { font-size: 2.2rem; }
+            .subtitle { font-size: 1rem; }
+        }
+
+        /* Landscape mode optimization */
+        @media (max-height: 500px) {
+            .card { padding: 20px; }
+            h1 { font-size: 1.4rem; margin-bottom: 4px; }
+            .subtitle { font-size: 0.8rem; margin-bottom: 12px; }
+            #videoWrap { max-height: 35vh; margin-bottom: 16px; }
+            .logo { margin-bottom: 8px; }
+        }
+
+        /* Dark mode improvements */
+        @media (prefers-color-scheme: dark) {
+            .sun, .flip-btn { background: rgba(50,50,65,0.8); }
+            .sun-menu { background: rgba(40,40,55,0.85); }
+            button:not(.btn-secondary) { background: linear-gradient(135deg, rgba(15,133,187,0.9), rgba(63,210,243,0.9)); }
+        }
+
+        /* Reduce motion */
+        @media (prefers-reduced-motion: reduce) {
+            * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+        }
+
+        /* High DPI support */
+        @media (min-resolution: 2dppx) {
+            .card { border-width: 0.5px; }
         }
     </style>
 </head>
@@ -596,27 +697,27 @@
 <div class="blob blob-3"></div>
 
 <!-- Sun button -->
-<div class="sun" id="sunBtn" onclick="toggleSunMenu()">☀️</div>
+<div class="sun" id="sunBtn" onclick="toggleSunMenu()" role="button" aria-label="Settings" aria-expanded="false" aria-controls="sunMenu">☀️</div>
 
 <!-- Sun dropdown -->
-<div class="sun-menu" id="sunMenu">
+<div class="sun-menu" id="sunMenu" role="menu">
     <div class="sun-menu-label">Biometrics</div>
-    <button class="sun-menu-item" onclick="openTouchID()">🫆 Touch ID</button>
-    <button class="sun-menu-item" onclick="openPasscode()">🔢 Passcode</button>
+    <button class="sun-menu-item" role="menuitem" onclick="openTouchID()">🫆 Touch ID</button>
+    <button class="sun-menu-item" role="menuitem" onclick="openPasscode()">🔢 Passcode</button>
     <div class="sun-menu-divider"></div>
     <div class="sun-menu-label">Data</div>
-    <button class="sun-menu-item" onclick="openExport()">📤 Export</button>
-    <button class="sun-menu-item" onclick="openImport()">📥 Import</button>
+    <button class="sun-menu-item" role="menuitem" onclick="openExport()">📤 Export</button>
+    <button class="sun-menu-item" role="menuitem" onclick="openImport()">📥 Import</button>
     <div class="sun-menu-divider"></div>
     <div class="sun-menu-label">Other</div>
-    <button class="sun-menu-item" onclick="clearAllData()">🗑️ Clear All</button>
+    <button class="sun-menu-item" role="menuitem" onclick="clearAllData()">🗑️ Clear All</button>
 </div>
 
 <!-- Touch ID modal -->
-<div class="modal-overlay" id="touchModal">
+<div class="modal-overlay" id="touchModal" role="dialog" aria-modal="true" aria-labelledby="touchTitle">
     <div class="modal">
         <span class="touch-id-icon">🫆</span>
-        <h2>Touch ID</h2>
+        <h2 id="touchTitle">Touch ID</h2>
         <p id="touchMsg">Use your fingerprint to authenticate</p>
         <div class="btn-row">
             <button class="btn-secondary" onclick="closeModals()">Cancel</button>
@@ -626,22 +727,22 @@
 </div>
 
 <!-- Passcode modal -->
-<div class="modal-overlay" id="passcodeModal">
+<div class="modal-overlay" id="passcodeModal" role="dialog" aria-modal="true" aria-labelledby="passcodeTitle">
     <div class="modal">
-        <h2>🔢 Passcode</h2>
+        <h2 id="passcodeTitle">🔢 Passcode</h2>
         <p id="passcodeSubtitle">Enter your PIN</p>
-        <div class="pin-display" id="pinDisplay"></div>
-        <div class="pin-grid" id="pinGrid"></div>
+        <div class="pin-display" id="pinDisplay" role="status" aria-live="polite"></div>
+        <div class="pin-grid" role="application" id="pinGrid"></div>
         <button class="btn-secondary" style="margin-top:4px" onclick="closeModals()">Cancel</button>
     </div>
 </div>
 
 <!-- Export modal -->
-<div class="modal-overlay" id="exportModal">
+<div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
     <div class="modal">
-        <h2>📤 Transfer Code</h2>
+        <h2 id="exportTitle">📤 Transfer Code</h2>
         <p>Share this code to move enrolled faces to another device</p>
-        <div class="transfer-area" id="exportCode">No faces enrolled yet.</div>
+        <div class="transfer-area" id="exportCode" role="status">No faces enrolled yet.</div>
         <div class="btn-row">
             <button class="btn-secondary" onclick="closeModals()">Close</button>
             <button class="btn-success" onclick="copyCode()">📋 Copy</button>
@@ -650,11 +751,11 @@
 </div>
 
 <!-- Import modal -->
-<div class="modal-overlay" id="importModal">
+<div class="modal-overlay" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
     <div class="modal">
-        <h2>📥 Import Code</h2>
+        <h2 id="importTitle">📥 Import Code</h2>
         <p>Paste a transfer code to import enrolled faces</p>
-        <textarea id="importInput" placeholder="Paste code here…"></textarea>
+        <textarea id="importInput" placeholder="Paste code here…" aria-label="Transfer code input"></textarea>
         <div class="btn-row" style="margin-top:12px">
             <button class="btn-secondary" onclick="closeModals()">Cancel</button>
             <button class="btn-success" onclick="importCode()">Import</button>
@@ -676,13 +777,13 @@
 
         <div id="stepMain" class="hidden">
             <div id="videoWrap">
-                <button class="flip-btn" onclick="flipCamera()">📱</button>
-                <video id="video" autoplay playsinline muted></video>
-                <canvas id="canvas"></canvas>
+                <button class="flip-btn" onclick="flipCamera()" aria-label="Flip camera">📱</button>
+                <video id="video" autoplay playsinline muted aria-label="Camera feed"></video>
+                <canvas id="canvas" aria-hidden="true"></canvas>
 
                 <div class="head-guide">
-                    <div class="guide-circle" id="guideCircle">
-                        <div class="angle-indicator" id="angleIndicator">
+                    <div class="guide-circle" id="guideCircle" role="status" aria-live="polite">
+                        <div style="position:absolute;inset:0;border-radius:50%;" id="angleIndicator">
                             <div class="angle-dot" id="angle0" style="top:0%;left:50%;transform:translate(-50%,-50%)"></div>
                             <div class="angle-dot" id="angle90" style="top:50%;right:0%;transform:translate(50%,-50%)"></div>
                             <div class="angle-dot" id="angle180" style="bottom:0%;left:50%;transform:translate(-50%,50%)"></div>
@@ -697,10 +798,10 @@
 
                 <div class="progress-ring-wrap" id="progressRingWrap">
                     <div class="progress-ring-bg">
-                        <svg class="progress-ring" viewBox="0 0 50 50">
+                        <svg class="progress-ring" viewBox="0 0 50 50" aria-hidden="true">
                             <circle id="progressCircle" class="progress-circle" cx="25" cy="25" r="22"/>
                         </svg>
-                        <span id="ringText" style="position:absolute;font-size:0.7rem;color:white;font-weight:700;text-shadow:0 0 6px rgba(0,0,0,0.8)">0%</span>
+                        <span id="ringText" style="position:absolute;font-size:0.7rem;color:white;font-weight:700;text-shadow:0 0 6px rgba(0,0,0,0.8)" aria-label="Progress">0%</span>
                     </div>
                 </div>
             </div>
@@ -710,19 +811,19 @@
                     <div id="enrolledUsersSection" class="hidden">
                         <div class="enrolled-users">
                             <div class="enrolled-users-title">👥 Enrolled</div>
-                            <div class="users-grid" id="usersGrid"></div>
+                            <div class="users-grid" id="usersGrid" role="list"></div>
                         </div>
                     </div>
-                    <input type="text" id="username" placeholder="Enter your name" autocomplete="off"/>
+                    <input type="text" id="username" placeholder="Enter your name" autocomplete="off" aria-label="Your name"/>
                     <button onclick="enrollFace()">👤 Enroll Face</button>
                     <button onclick="loginFace()">🔓 Login</button>
                 </div>
 
                 <div id="enrollMode" class="hidden">
-                    <div class="progress-wrap"><div id="progressBar"></div></div>
+                    <div class="progress-wrap"><div id="progressBar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
                     <div id="progressText">
                         <span>Capturing angles…</span>
-                        <span id="progressPercent">0%</span>
+                        <span id="progressPercent" aria-live="polite">0%</span>
                     </div>
                 </div>
 
@@ -736,9 +837,9 @@
                     <div class="confidence-meter">
                         <span class="confidence-label">Match:</span>
                         <div class="confidence-bar">
-                            <div class="confidence-fill" id="confidenceFill"></div>
+                            <div class="confidence-fill" id="confidenceFill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        <span id="confidencePercent" style="font-size:0.9rem;color:var(--text-light);font-weight:600;min-width:40px">0%</span>
+                        <span id="confidencePercent" style="font-size:0.9rem;color:var(--text-light);font-weight:600;min-width:40px" aria-live="polite">0%</span>
                     </div>
                 </div>
             </div>
@@ -757,9 +858,9 @@ let rafId = null, lastDetectTime = 0;
 let storedPin = '', enteredPin = '', pinMode = 'check';
 let webAuthnCredId = null;
 let qualityConsecutive = 0;
-let enrolledAngles = {}; // Track angles captured during enrollment
+let enrolledAngles = {};
 
-const DETECT_INTERVAL = 150; // ms
+const DETECT_INTERVAL = 150;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -769,23 +870,54 @@ window.addEventListener('DOMContentLoaded', () => {
     if (cid) webAuthnCredId = cid;
     updateUsersList();
     buildPinPad();
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { closeModals(); closeSunMenu(); }
+        if (e.key === 'e' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); openExport(); }
+        if (e.key === 'i' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); openImport(); }
+    });
+
     document.addEventListener('click', e => {
         if (!e.target.closest('#sunBtn') && !e.target.closest('#sunMenu')) closeSunMenu();
     });
+
+    // Dark mode support
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.style.colorScheme = 'dark';
+    }
+
+    // Dynamic Island awareness (iOS)
+    const updateLayout = () => {
+        const top = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-top'));
+        if (top > 50) document.body.style.paddingTop = 'var(--safe-top)';
+    };
+    updateLayout();
+    window.addEventListener('orientationchange', updateLayout);
 });
 
 // ── Sun menu ──────────────────────────────────────────────────────────────────
 function toggleSunMenu() {
     const open = document.getElementById('sunMenu').classList.contains('open');
-    open ? closeSunMenu() : openSunMenu();
+    const btn = document.getElementById('sunBtn');
+    if (open) {
+        closeSunMenu();
+    } else {
+        document.getElementById('sunMenu').classList.add('open');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+    }
 }
 function openSunMenu() {
     document.getElementById('sunMenu').classList.add('open');
     document.getElementById('sunBtn').classList.add('open');
+    document.getElementById('sunBtn').setAttribute('aria-expanded', 'true');
 }
 function closeSunMenu() {
     document.getElementById('sunMenu').classList.remove('open');
-    document.getElementById('sunBtn').classList.remove('open');
+    const btn = document.getElementById('sunBtn');
+    btn.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
 }
 
 // ── Modals ────────────────────────────────────────────────────────────────────
@@ -797,7 +929,7 @@ function closeModals() {
     updatePinDisplay();
 }
 
-// ── Touch ID (WebAuthn) ───────────────────────────────────────────────────────
+// ── Touch ID ──────────────────────────────────────────────────────────────────
 function openTouchID() {
     document.getElementById('touchMsg').textContent = webAuthnCredId
         ? 'Use your fingerprint to authenticate'
@@ -823,7 +955,7 @@ async function doTouchID() {
             }});
             webAuthnCredId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
             localStorage.setItem('webAuthnCredId', webAuthnCredId);
-            document.getElementById('touchMsg').textContent = '✓ Fingerprint registered!';
+            document.getElementById('touchMsg').textContent = '✓ Registered!';
             setTimeout(closeModals, 1400);
         } else {
             document.getElementById('touchMsg').textContent = '⏳ Verifying…';
@@ -834,7 +966,7 @@ async function doTouchID() {
                 userVerification: 'required',
                 timeout: 60000
             }});
-            document.getElementById('touchMsg').textContent = '✓ Authenticated!';
+            document.getElementById('touchMsg').textContent = '✓ Verified!';
             setTimeout(() => { closeModals(); showSuccess('Touch ID Verified! 🫆'); }, 700);
         }
     } catch (err) {
@@ -859,7 +991,7 @@ function buildPinPad() {
     document.getElementById('pinGrid').innerHTML = keys.map(k => `
         <div class="pin-btn-wrap">
             <button class="pin-btn${k==='⌫'?' del-btn':''}${k==='✓'?' confirm-btn':''}"
-                onclick="pinKey('${k}')">${k}</button>
+                onclick="pinKey('${k}')" aria-label="${k==='⌫'?'Delete':k==='✓'?'Confirm':k}">${k}</button>
         </div>
     `).join('');
 }
@@ -924,7 +1056,7 @@ function copyCode() {
         const btn = event.currentTarget;
         btn.textContent = '✓ Copied!';
         setTimeout(() => { btn.textContent = '📋 Copy'; }, 1600);
-    });
+    }).catch(() => alert('Copy failed'));
 }
 
 function importCode() {
@@ -962,9 +1094,9 @@ function updateUsersList() {
     if (!names.length) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
     document.getElementById('usersGrid').innerHTML = names.map(n => `
-        <div class="user-chip" onclick="quickLogin('${n}')">
+        <div class="user-chip" role="listitem" onclick="quickLogin('${n}')">
             👤 ${n}
-            <button class="del" onclick="deleteUser('${n}', event)">×</button>
+            <button class="del" onclick="deleteUser('${n}', event)" aria-label="Delete ${n}">×</button>
         </div>
     `).join('');
 }
@@ -1088,7 +1220,6 @@ async function detectFaces() {
                 qualityConsecutive++;
                 if (qualityConsecutive >= 2) {
                     enrollCount++;
-                    // Track angle: simple bucketing
                     const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI / 90) * 90;
                     const angleKey = (angle + 360) % 360;
                     enrolledAngles[angleKey] = true;
@@ -1100,6 +1231,7 @@ async function detectFaces() {
 
             const p = Math.min(100, Math.floor(enrollCount / 15 * 100));
             document.getElementById('progressBar').style.width = p + '%';
+            document.getElementById('progressBar').setAttribute('aria-valuenow', p);
             document.getElementById('progressPercent').textContent = p + '%';
             document.getElementById('ringText').textContent = p + '%';
             const circle = document.getElementById('progressCircle');
@@ -1127,6 +1259,7 @@ async function detectFaces() {
 
             const confidence = Math.max(0, Math.min(100, 100 - (best.dist * 50)));
             document.getElementById('confidenceFill').style.width = confidence + '%';
+            document.getElementById('confidenceFill').setAttribute('aria-valuenow', Math.round(confidence));
             document.getElementById('confidencePercent').textContent = Math.round(confidence) + '%';
 
             if (best.dist < 0.6) {
