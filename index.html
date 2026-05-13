@@ -136,6 +136,17 @@
       }
     }
 
+    @keyframes slideDownFade {
+      from { opacity:0; transform:translateY(-20px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+
+    @keyframes starPulse {
+      0% { transform:scale(1) rotate(0deg); }
+      50% { transform:scale(1.1) rotate(10deg); }
+      100% { transform:scale(1) rotate(0deg); }
+    }
+
     body {
       display:flex;
       align-items:center;
@@ -195,8 +206,49 @@
       font-size:1rem;
       color:#666;
       margin-bottom:20px;
-      line-height:1.5;
+      line-height:1.6;
       animation:slideUp 0.7s ease 0.15s backwards;
+    }
+
+    .empty-state {
+      text-align:center;
+      padding:30px 0;
+      animation:slideDownFade 0.5s ease;
+    }
+
+    .empty-state-icon {
+      font-size:3rem;
+      margin-bottom:12px;
+      animation:starPulse 2s ease-in-out infinite;
+    }
+
+    .empty-state-text {
+      font-size:0.95rem;
+      color:#999;
+      margin-bottom:16px;
+    }
+
+    .streak-badge {
+      display:inline-block;
+      background:linear-gradient(135deg,#fbbf24,#f59e0b);
+      color:#fff;
+      padding:6px 12px;
+      border-radius:8px;
+      font-size:0.85rem;
+      font-weight:600;
+      margin-left:8px;
+      animation:slideUp 0.5s ease;
+    }
+
+    .error-box {
+      background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(220,38,38,0.1));
+      border:1px solid rgba(239,68,68,0.3);
+      border-radius:10px;
+      padding:12px;
+      margin:12px 0;
+      color:#dc2626;
+      font-size:0.9rem;
+      animation:slideUp 0.3s ease;
     }
 
     #msg {
@@ -900,6 +952,7 @@
     <div class="logo">📱</div>
     <h1>Face ID MAX</h1>
     <p>Premium Biometric Auth</p>
+    <div id="streakBadge" class="hidden"></div>
     <p id="msg">👋 Welcome! Tap Scan to start</p>
 
     <div id="start">
@@ -921,9 +974,17 @@
           </div>
         </div>
 
+        <div id="emptyState" class="hidden">
+          <div class="empty-state">
+            <div class="empty-state-icon">👤</div>
+            <div class="empty-state-text">No faces enrolled yet</div>
+            <p style="font-size:0.85rem;color:#bbb;margin-bottom:0;">Start by enrolling your face</p>
+          </div>
+        </div>
+
         <input type="text" id="name" placeholder="Your name" autocomplete="off">
         <button onclick="enroll()">👤 Enroll</button>
-        <button onclick="login()">🔓 Login</button>
+        <button onclick="login()" id="loginBtn">🔓 Login</button>
       </div>
 
       <div id="enroll" class="hidden">
@@ -945,8 +1006,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
   <script>
-    let v,c,x,u={},n='',m='idle',e=0,d=0,cam='user',lr=null,rc=0,rid=null,ldt=0,pin='',ent='',pmode='check',wa=null,qc=0,ang={},blink=0,prevEyes=1,failCnt=0;
-    const INT=150,FAIL_MAX=5;
+    let v,c,x,u={},n='',m='idle',e=0,d=0,cam='user',lr=null,rc=0,rid=null,ldt=0,pin='',ent='',pmode='check',wa=null,qc=0,ang={},blink=0,prevEyes=1,failCnt=0,streak=0,lastAuth='';
+    const INT=180,FAIL_MAX=5;
 
     window.addEventListener('DOMContentLoaded',()=>{
       if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -954,6 +1015,9 @@
       pin=localStorage.getItem('p')||'';
       const w=localStorage.getItem('w');
       if(w)wa=w;
+      lastAuth=localStorage.getItem('lastAuth')||'';
+      streak=parseInt(localStorage.getItem('streak')||'0');
+      loadStreak();
       upd();
       pins();
     });
@@ -998,14 +1062,43 @@
       setTimeout(()=>m.style.animation='',10);
     }
 
+    function loadStreak(){
+      const today=new Date().toISOString().split('T')[0];
+      if(lastAuth){
+        const lastDate=new Date(lastAuth);
+        const todayDate=new Date(today);
+        const dayDiff=Math.floor((todayDate-lastDate)/(1000*60*60*24));
+        if(dayDiff>1)streak=0;
+      }
+      updateStreakBadge();
+    }
+
+    function updateStreakBadge(){
+      const badge=document.getElementById('streakBadge');
+      if(streak>0){
+        badge.innerHTML=`<span class="streak-badge">🔥 ${streak} day streak</span>`;
+        badge.classList.remove('hidden');
+      }else{
+        badge.classList.add('hidden');
+      }
+    }
+
     function upd(){
       const names=Object.keys(u);
       const sec=document.getElementById('users');
+      const empty=document.getElementById('emptyState');
+      const loginBtn=document.getElementById('loginBtn');
       if(!names.length){
         sec.classList.add('hidden');
+        empty.classList.remove('hidden');
+        loginBtn.disabled=true;
+        loginBtn.style.opacity='0.5';
         return;
       }
       sec.classList.remove('hidden');
+      empty.classList.add('hidden');
+      loginBtn.disabled=false;
+      loginBtn.style.opacity='1';
       document.getElementById('ulist').innerHTML=names.map(n=>`<div class="chip" onclick="quick('${n}')">👤 ${n}</div>`).join('');
     }
 
@@ -1137,6 +1230,11 @@
               rc=0;
             }
           }else{
+            if(best.dist>=.58){
+              if(blink>0)failCnt++;
+              if(failCnt>=FAIL_MAX)set_msg('🔒 Locked (too many failed attempts)');
+              else set_msg(`❌ Not recognized (${FAIL_MAX-failCnt} attempts left)`);
+            }
             if(best.dist>=.58||blink<1)lr=null;rc=0;
           }
         }
@@ -1156,26 +1254,28 @@
 
     function enroll(){
       n=document.getElementById('name').value.trim();
-      if(!n){set_msg('❌ Enter a name');return;}
-      if(n.length>20){set_msg('❌ Name too long');return;}
+      if(!n){set_msg('❌ Please enter your name');return;}
+      if(n.length>20){set_msg('❌ Name must be 20 chars or less');return;}
       if(u[n]&&!confirm(`Re-enroll ${n}?`))return;
       m='enroll';
       e=0;
       qc=0;
       blink=0;
       ang={};
+      failCnt=0;
       document.getElementById('form').classList.add('hidden');
       document.getElementById('enroll').classList.remove('hidden');
-      set_msg('📍 Center face');
+      set_msg('📍 Center face, move to 4 angles');
     }
 
     function login(){
-      if(failCnt>=FAIL_MAX){set_msg('⏳ Locked');return;}
+      if(failCnt>=FAIL_MAX){set_msg('🔒 Locked (too many attempts)');return;}
       m='login';
       blink=0;
+      rc=0;
       document.getElementById('form').classList.add('hidden');
       document.getElementById('lgn').classList.remove('hidden');
-      set_msg('👁️ Blink to login');
+      set_msg('👁️ Look at camera & blink to verify');
     }
 
     function show_ok(msg){
@@ -1184,6 +1284,19 @@
       document.getElementById('lgn').classList.add('hidden');
       document.getElementById('success').classList.remove('hidden');
       document.getElementById('succeed').textContent=msg;
+      if(m==='login'){
+        const today=new Date().toISOString().split('T')[0];
+        if(lastAuth!==today){
+          const lastDate=lastAuth?new Date(lastAuth):new Date();
+          const todayDate=new Date(today);
+          const dayDiff=Math.floor((todayDate-lastDate)/(1000*60*60*24));
+          streak=dayDiff===1?streak+1:1;
+          lastAuth=today;
+          localStorage.setItem('streak',streak);
+          localStorage.setItem('lastAuth',today);
+          updateStreakBadge();
+        }
+      }
       confetti();
     }
 
@@ -1212,12 +1325,13 @@
       qc=0;
       blink=0;
       ang={};
+      failCnt=0;
       document.getElementById('name').value='';
       document.getElementById('form').classList.remove('hidden');
       document.getElementById('enroll').classList.add('hidden');
       document.getElementById('lgn').classList.add('hidden');
       document.getElementById('success').classList.add('hidden');
-      set_msg('👋 Tap Enroll or Login');
+      set_msg(Object.keys(u).length?'👋 Choose action':'👤 Enroll your face');
     }
 
     function quick(name){
@@ -1278,21 +1392,27 @@
 
     function sub_pin(){
       if(pmode==='set'){
-        if(ent.length<4){alert('Min 4 digits');return;}
+        if(ent.length<4){document.getElementById('passMsg').textContent='❌ Min 4 digits required';return;}
         pin=ent;
         localStorage.setItem('p',pin);
-        document.getElementById('passMsg').textContent='✓ Saved!';
+        document.getElementById('passMsg').textContent='✓ PIN saved!';
         setTimeout(close_m,800);
       }else{
         if(ent===pin){
-          document.getElementById('passMsg').textContent='✓ Correct!';
+          document.getElementById('passMsg').textContent='✓ PIN verified!';
+          failCnt=0;
           setTimeout(close_m,500);
         }else{
           ent='';
           upd_pin();
           failCnt++;
-          document.getElementById('passMsg').textContent=`❌ Wrong (${FAIL_MAX-failCnt} left)`;
-          if(failCnt>=FAIL_MAX)setTimeout(()=>{close_m();set_msg('🔒 Locked')},1200);
+          const remaining=FAIL_MAX-failCnt;
+          if(remaining<=0){
+            document.getElementById('passMsg').textContent='🔒 Locked (max attempts)';
+            setTimeout(()=>{close_m();set_msg('🔒 Locked (max attempts)')},1200);
+          }else{
+            document.getElementById('passMsg').textContent=`❌ Wrong PIN (${remaining} attempt${remaining>1?'s':''} left)`;
+          }
         }
       }
     }
@@ -1319,6 +1439,7 @@
 
     function do_imp(){
       const raw=document.getElementById('impInput').value.trim();
+      if(!raw){alert('❌ Please paste a code');return;}
       try{
         const data=JSON.parse(decodeURIComponent(escape(atob(raw))));
         const cnt=Object.keys(data).length;
@@ -1326,9 +1447,9 @@
         Object.assign(u,data);
         save();
         close_m();
-        alert(`✓ ${cnt} faces imported!`);
+        alert(`✓ Imported ${cnt} face${cnt>1?'s':''}!`);
       }catch{
-        alert('❌ Bad code');
+        alert('❌ Invalid code. Make sure you copied the full code.');
       }
     }
 
@@ -1345,6 +1466,15 @@
       document.getElementById('stat-device').textContent=device;
       document.getElementById('stat-level').textContent=level;
       document.getElementById('stat-xp').textContent=xp;
+      const statsBox=document.querySelector('#statsModal .box');
+      const streakLine=statsBox.querySelector('.stat-streak');
+      if(streakLine)streakLine.textContent=`🔥 Streak: ${streak} days`;
+      else{
+        const newLine=document.createElement('p');
+        newLine.className='stat-streak';
+        newLine.textContent=`🔥 Streak: ${streak} days`;
+        statsBox.insertBefore(newLine,statsBox.querySelector('button'));
+      }
       open_m('statsModal');
     }
 
