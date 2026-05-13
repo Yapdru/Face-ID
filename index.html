@@ -1602,13 +1602,16 @@
         const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:.48});
         const dets=await faceapi.detectAllFaces(v,opts).withFaceLandmarks().withFaceDescriptors();
 
-        if(m!==MODE.ENROLL)x.clearRect(0,0,c.width,c.height);
+        if(m===MODE.ENROLL){
+          if(!dets.length){
+            drawFaceGuide();
+            return;
+          }
+        }else{
+          x.clearRect(0,0,c.width,c.height);
+        }
 
         if(!dets.length){
-          if(m===MODE.ENROLL){
-            drawFaceGuide();
-            set_msg('👤 Center face · move in circle · blink');
-          }
           return;
         }
         if(!dets[0]||!dets[0].descriptor||dets[0].descriptor.length!==128)return;
