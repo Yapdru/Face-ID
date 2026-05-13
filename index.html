@@ -1438,12 +1438,6 @@
         if(!dets.length)return;
         if(!dets[0]||!dets[0].descriptor||dets[0].descriptor.length!==128)return;
 
-        const displaySize={width:v.videoWidth,height:v.videoHeight};
-        faceapi.matchDimensions(c,displaySize);
-        const resized=faceapi.resizeResults(dets,displaySize);
-        faceapi.draw.drawDetections(c,resized);
-        if(m==='enroll')faceapi.draw.drawFaceLandmarks(c,resized);
-
         const {descriptor,landmarks}=dets[0];
         chk_blink(landmarks);
 
