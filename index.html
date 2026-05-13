@@ -1343,7 +1343,9 @@
     }
   </script>
   <script>
-    let v,c,x,u={},n='',m='idle',e=0,d=0,cam='user',lr=null,rc=0,rid=null,ldt=0,
+    const MODE={IDLE:'idle',ENROLL:'enroll',LOGIN:'login'};
+    const CONFIG={INT:180,FAIL_MAX:5,SECTORS:8,CENTER_THRESHOLD:80};
+    let v,c,x,u={},n='',m=MODE.IDLE,e=0,d=0,cam='user',lr=null,rc=0,rid=null,ldt=0,
         pin='',ent='',pmode='check',wa=null,qc=0,ang={},blink=0,prevEyes=1,
         failCnt=0,streak=0,lastAuth='',xp=0,achievements={},modelLoaded=false;
     const INT=180,FAIL_MAX=5,SECTORS=8;
@@ -1380,6 +1382,13 @@
         container.appendChild(p);
       }
     })();
+
+    function copyToClipboard(text,originalText='📋 Copy',successText='✓ Done!'){
+      navigator.clipboard.writeText(text).then(()=>{
+        const b=event.currentTarget;b.textContent=successText;
+        setTimeout(()=>b.textContent=originalText,1500);
+      });
+    }
 
     window.addEventListener('DOMContentLoaded',()=>{
       if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -1585,10 +1594,10 @@
         const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:.48});
         const dets=await faceapi.detectAllFaces(v,opts).withFaceLandmarks().withFaceDescriptors();
 
-        if(m!=='enroll')x.clearRect(0,0,c.width,c.height);
+        if(m!==MODE.ENROLL)x.clearRect(0,0,c.width,c.height);
 
         if(!dets.length){
-          if(m==='enroll')drawFaceGuide();
+          if(m===MODE.ENROLL)drawFaceGuide();
           return;
         }
         if(!dets[0]||!dets[0].descriptor||dets[0].descriptor.length!==128)return;
@@ -1596,7 +1605,7 @@
         const {descriptor,landmarks}=dets[0];
         chk_blink(landmarks);
 
-        if(m==='enroll'){
+        if(m===MODE.ENROLL){
           const nose=landmarks.getNose()[3];
           const cx=c.width/2,cy=c.height/2;
           const dx=nose.x-cx,dy=nose.y-cy;
@@ -1604,7 +1613,7 @@
 
           drawFaceGuide(nose.x,nose.y);
 
-          if(dist<=80){
+          if(dist<=CONFIG.CENTER_THRESHOLD){
             qc++;
             if(qc>=2){
               const raw=Math.round(Math.atan2(dy,dx)*180/Math.PI/45)*45;
@@ -1631,12 +1640,12 @@
 
           if(captured>=6&&blink>0){
             u[n]={descriptor:Array.from(descriptor),enrolled:new Date().toISOString(),angles:Object.keys(ang)};
-            save();m='idle';e=0;blink=0;ang={};
+            save();m=MODE.IDLE;e=0;blink=0;ang={};
             x.clearRect(0,0,c.width,c.height);
             show_ok(`${n} enrolled! ✓`);
           }
 
-        }else if(m==='login'){
+        }else if(m===MODE.LOGIN){
           let best={name:null,dist:Infinity};
           for(const [nm,data]of Object.entries(u)){
             if(!data.descriptor||data.descriptor.length!==128)continue;
@@ -1647,7 +1656,7 @@
           document.getElementById('conf-num').textContent=Math.round(conf)+'%';
           if(best.dist<.58&&blink>1){
             if(lr===best.name)rc++;else{lr=best.name;rc=1;blink=0;}
-            if(rc>=3){m='idle';show_ok(`Welcome ${best.name}! ✓`);lr=null;rc=0;}
+            if(rc>=3){m=MODE.IDLE;show_ok(`Welcome ${best.name}! ✓`);lr=null;rc=0;}
           }else{
             if(best.dist>=.58){
               if(blink>0)failCnt++;
@@ -1674,7 +1683,7 @@
       if(!n){set_msg('❌ Please enter your name');return;}
       if(n.length>20){set_msg('❌ Name max 20 chars');return;}
       if(u[n]&&!confirm(`Re-enroll ${n}?`))return;
-      m='enroll';e=0;qc=0;blink=0;ang={};failCnt=0;
+      m=MODE.ENROLL;e=0;qc=0;blink=0;ang={};failCnt=0;
       document.getElementById('sectorPreview').innerHTML=Array(SECTORS).fill('<div class="sector-dot"></div>').join('');
       document.getElementById('form').classList.add('hidden');
       document.getElementById('enroll').classList.remove('hidden');
@@ -1683,7 +1692,7 @@
 
     function login(){
       if(failCnt>=FAIL_MAX){set_msg('🔒 Locked (too many attempts)');return;}
-      m='login';blink=0;rc=0;
+      m=MODE.LOGIN;blink=0;rc=0;
       document.getElementById('form').classList.add('hidden');
       document.getElementById('lgn').classList.remove('hidden');
       set_msg('👁️ Look at camera & blink twice');
@@ -1695,7 +1704,7 @@
       document.getElementById('lgn').classList.add('hidden');
       document.getElementById('success').classList.remove('hidden');
       document.getElementById('succeed').textContent=msg;
-      if(m==='enroll'||msg.includes('enrolled')){addXP(10);haptic_feedback('medium');}
+      if(m===MODE.ENROLL||msg.includes('enrolled')){addXP(10);haptic_feedback('medium');}
       else{
         addXP(5);haptic_feedback('tap');
         const logins=parseInt(localStorage.getItem('logins')||'0')+1;
@@ -1724,7 +1733,7 @@
     }
 
     function back(){
-      n='';m='idle';e=0;qc=0;blink=0;ang={};failCnt=0;
+      n='';m=MODE.IDLE;e=0;qc=0;blink=0;ang={};failCnt=0;
       document.getElementById('name').value='';
       document.getElementById('form').classList.remove('hidden');
       document.getElementById('enroll').classList.add('hidden');
@@ -1817,9 +1826,7 @@
     }
     function imp(){document.getElementById('impInput').value='';open_m('impModal');}
     function copy_code(){
-      navigator.clipboard.writeText(document.getElementById('code').textContent).then(()=>{
-        const b=event.currentTarget;b.textContent='✓ Done!';setTimeout(()=>b.textContent='📋 Copy',1500);
-      });
+      copyToClipboard(document.getElementById('code').textContent);
     }
     function do_imp(){
       const raw=document.getElementById('impInput').value.trim();
@@ -1865,9 +1872,7 @@
     function show_help(){open_m('helpModal');}
     function show_share(){open_m('shareModal');}
     function copy_share(){
-      navigator.clipboard.writeText('https://yapdru.github.io/Face-ID').then(()=>{
-        const b=event.currentTarget;b.textContent='✓ Copied!';setTimeout(()=>b.textContent='📋 Copy',1500);
-      });
+      copyToClipboard('https://yapdru.github.io/Face-ID','📋 Copy','✓ Copied!');
     }
     function native_share(){
       if(navigator.share)navigator.share({title:'Face ID MAX',text:'Premium biometric auth',url:'https://yapdru.github.io/Face-ID'}).catch(()=>{});
