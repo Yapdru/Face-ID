@@ -1950,9 +1950,7 @@
     }
     function export_backup(){
       const code=btoa(unescape(encodeURIComponent(JSON.stringify({u,pin,xp,streak,achievements,lastAuth,timestamp:new Date().toISOString(),version:'2.0'}))));
-      navigator.clipboard.writeText(code).then(()=>{
-        const b=event.currentTarget;b.textContent='✓ Exported!';setTimeout(()=>b.textContent='📦 Export Backup',1500);
-      });
+      copyToClipboard(code,'📦 Export Backup','✓ Exported!');
     }
     function haptic_feedback(pattern='light'){
       if(navigator.vibrate){
