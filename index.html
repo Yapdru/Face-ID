@@ -285,7 +285,9 @@
         logoMorph 8s ease-in-out infinite,
         logoGlow 5s ease-in-out infinite,
         rotateIn 0.9s var(--spring),
-        prismShift 7s ease-in-out infinite;
+        prismShift 7s ease-in-out infinite,
+        pulse-soft 3s ease-in-out infinite 2s,
+        deep-glow 6s ease-in-out infinite;
       cursor:pointer;
       transition:transform 0.5s var(--spring),filter 0.4s ease;
       position:relative;overflow:hidden;
@@ -311,7 +313,7 @@
       background-size:300% 300%;
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
       margin-bottom:8px;
-      animation:slideUp 0.85s var(--ease) 0.08s backwards,shimmerText 6s linear infinite;
+      animation:slideUp 0.85s var(--ease) 0.08s backwards,shimmerText 6s linear infinite,textShadowGlow 4s ease-in-out infinite;
       filter:drop-shadow(0 0 20px rgba(10,132,255,0.3));
     }
     p{font-size:1rem;color:rgba(200,220,240,0.75);margin-bottom:20px;line-height:1.65;animation:slideUp 0.85s var(--ease) 0.14s backwards;}
@@ -367,7 +369,7 @@
         0 18px 40px rgba(10,132,255,0.4),
         inset 0 2px 5px rgba(255,255,255,0.5);
       background:linear-gradient(135deg,#1a90ff 0%,#0ea5e9 55%,#12b0f8 100%);
-      animation:glowBtn 1.8s ease-in-out infinite;
+      animation:glowBtn 1.8s ease-in-out infinite,buttonWave 0.6s ease-out;
     }
     button:active{transform:translateY(-3px) scale(0.97);opacity:0.88;}
     button:focus-visible{outline:2.5px solid #0a84ff;outline-offset:4px;}
@@ -406,7 +408,7 @@
       opacity:0;pointer-events:none;
       transition:opacity 0.4s var(--spring);
     }
-    .modal.open{opacity:1;pointer-events:all;}
+    .modal.open{opacity:1;pointer-events:all;animation:fadeIn 0.35s var(--spring);}
     .box{
       background:rgba(255,255,255,0.07);
       border-radius:44px;padding:52px 46px;max-width:420px;width:100%;
@@ -416,7 +418,7 @@
         inset 0 1px 0 rgba(255,255,255,0.2),
         inset 0 -1px 0 rgba(0,0,0,0.25);
       border:1px solid rgba(255,255,255,0.13);
-      animation:scaleUp 0.55s var(--spring);
+      animation:scaleUp 0.55s var(--spring),modalEntrance 0.65s var(--spring);
       backdrop-filter:blur(var(--g-blur)) saturate(var(--g-sat)) brightness(1.08);
       -webkit-backdrop-filter:blur(var(--g-blur)) saturate(var(--g-sat)) brightness(1.08);
       position:relative;overflow:hidden;
@@ -529,10 +531,11 @@
     .enroll-tip{
       font-size:0.92rem;font-weight:700;
       background:linear-gradient(90deg,rgba(10,132,255,0.9),rgba(48,209,88,0.9));
-      background-size:200%;
+      background-size:300%;
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
       margin:12px 0 16px;letter-spacing:-0.1px;
-      animation:pulseGlow 2.4s ease-in-out infinite,prismShift 3s ease-in-out infinite,tipFade 0.4s ease;
+      animation:pulseGlow 2.4s ease-in-out infinite,prismShift 2s ease-in-out infinite,tipFade 0.4s ease,shimmerText 4s linear infinite;
+      filter:drop-shadow(0 0 8px rgba(10,132,255,0.3));
     }
     .sector-preview{
       display:flex;justify-content:center;gap:10px;
@@ -543,6 +546,7 @@
       background:rgba(255,255,255,0.1);
       border:1.5px solid rgba(255,255,255,0.25);
       transition:all 0.5s var(--spring);
+      animation:sectorDot 4s ease-in-out infinite;
     }
     .sector-dot.captured{
       background:rgba(48,209,88,0.9);
@@ -571,7 +575,7 @@
       cursor:pointer;
       transition:all 0.4s var(--spring);
       box-shadow:0 4px 12px rgba(48,209,88,0.12),inset 0 1px 0 rgba(255,255,255,0.12);
-      animation:rotateIn 0.6s var(--spring);
+      animation:rotateIn 0.6s var(--spring),chipFloat 3s ease-in-out infinite;
       backdrop-filter:blur(20px);
     }
     .chip:hover{
@@ -586,7 +590,7 @@
       border:3px solid rgba(48,209,88,0.45);border-radius:50%;
       margin:22px auto;position:relative;
       box-shadow:0 0 40px rgba(48,209,88,0.22),inset 0 0 20px rgba(48,209,88,0.1);
-      animation:slideUp 0.6s ease,breathe 3.5s ease-in-out infinite;
+      animation:slideUp 0.6s ease,breathe 3.5s ease-in-out infinite,circleExpand 2s var(--spring);
       transition:all 0.45s var(--spring);
     }
     .circle.ok{
@@ -603,10 +607,10 @@
     #bar{
       height:100%;width:0%;
       background:linear-gradient(90deg,#0a84ff,#30d158,#0a84ff);
-      background-size:200% 100%;
+      background-size:300% 100%;
       transition:width 0.5s var(--ease);
       box-shadow:0 0 24px rgba(10,132,255,0.7),inset 0 1px 0 rgba(255,255,255,0.4);
-      animation:glowBar 2s ease-in-out infinite,shimmerText 2s linear infinite;
+      animation:glowBar 2s ease-in-out infinite,progressWave 3s linear infinite,progressPulse 1.5s ease-in-out infinite;
     }
     .buttons{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0;}
     .buttons button{flex:1;min-width:100px;}
@@ -641,7 +645,7 @@
     #success{color:#30d158;font-size:1.25rem;margin:20px 0;font-weight:700;}
     .icon{
       font-size:5.5rem;margin-bottom:22px;display:inline-block;
-      animation:bounce 1s var(--spring),heartbeat 1.8s ease-in-out 1s infinite;
+      animation:successPop 0.7s var(--spring),bounce 1s var(--spring) 0.7s,heartbeat 1.8s ease-in-out 1.7s infinite;
       filter:drop-shadow(0 14px 28px rgba(48,209,88,0.45));
     }
     textarea{height:84px;resize:none;}
@@ -670,6 +674,7 @@
       border-color:rgba(10,132,255,0.5);
       transform:scale(1.22) translateY(-7px);
       box-shadow:0 18px 44px rgba(10,132,255,0.35),inset 0 1px 0 rgba(255,255,255,0.25);
+      animation:buttonWave 0.5s ease-out;
     }
     .pin:active{transform:scale(0.84);}
     .pin.del{color:rgba(255,80,80,0.85);}
@@ -687,10 +692,11 @@
     .streak-badge{
       display:inline-block;
       background:linear-gradient(135deg,rgba(255,159,10,0.25),rgba(255,100,30,0.2));
+      background-size:200% 200%;
       border:1px solid rgba(255,159,10,0.4);
       color:#ffb040;padding:9px 18px;border-radius:16px;
       font-size:0.87rem;font-weight:700;margin-bottom:14px;
-      animation:slideUp 0.5s ease,floatBubble 2.5s ease-in-out infinite;
+      animation:slideUp 0.5s ease,floatBubble 2.5s ease-in-out infinite,prismShift 5s ease-in-out infinite;
       box-shadow:0 6px 18px rgba(255,159,10,0.2),inset 0 1px 0 rgba(255,255,255,0.12);
       backdrop-filter:blur(20px);
     }
@@ -711,6 +717,7 @@
       background:rgba(48,209,88,0.1);
       box-shadow:0 0 30px rgba(48,209,88,0.3),inset 0 1px 0 rgba(255,255,255,0.15);
       transform:scale(1.06);
+      animation:scaleUp 0.5s var(--spring),pulseGlow 3s ease-in-out infinite;
     }
     .achievement-emoji{font-size:2.2rem;display:block;margin-bottom:5px;}
     .achievement.unlocked .achievement-emoji{animation:starPulse 2.2s ease-in-out infinite;}
@@ -728,6 +735,7 @@
       backdrop-filter:blur(20px);padding:5px 12px;border-radius:10px;
       font-weight:700;border:1px solid rgba(10,132,255,0.2);letter-spacing:0.5px;
       box-shadow:0 4px 12px rgba(0,0,0,0.2);
+      animation:pulseGlow 3s ease-in-out infinite,floatBubble 4s ease-in-out infinite;
     }
     .xp-meter{
       background:rgba(10,132,255,0.06);
@@ -735,16 +743,17 @@
     }
     .xp-label{font-size:0.84rem;color:rgba(180,200,220,0.7);margin-bottom:8px;display:flex;justify-content:space-between;}
     .empty-state{text-align:center;padding:30px 0;animation:slideDownFade 0.55s ease;}
-    .empty-state-icon{font-size:3.5rem;margin-bottom:13px;animation:starPulse 3s ease-in-out infinite;}
+    .empty-state-icon{font-size:3.5rem;margin-bottom:13px;animation:starPulse 3s ease-in-out infinite,bounce 2s ease-in-out infinite 1s;}
     .empty-state-text{font-size:0.96rem;color:rgba(180,200,220,0.6);margin-bottom:16px;}
     #msg{
       min-height:22px;
       background:linear-gradient(90deg,rgba(10,132,255,0.9),rgba(48,209,88,0.8));
-      background-size:200%;
+      background-size:300%;
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
       font-weight:700;
       margin:16px 0;font-size:0.92rem;
-      animation:slideUp 0.55s ease,prismShift 5s ease-in-out infinite;
+      animation:slideUp 0.55s ease,prismShift 3s ease-in-out infinite,textShadowGlow 6s ease-in-out infinite;
+      filter:drop-shadow(0 0 4px rgba(10,132,255,0.2));
     }
     #msg.loading::after{
       content:'';display:inline-block;width:14px;height:14px;margin-left:10px;
@@ -792,6 +801,69 @@
     @keyframes frostEdge{
       0%,100%{background-position:0% 50%;}
       50%{background-position:100% 50%;}
+    }
+    @keyframes chipFloat{
+      0%,100%{transform:scale(1) translateY(0);}
+      50%{transform:scale(1.04) translateY(-4px);}
+    }
+    @keyframes buttonMagnetic{
+      0%{transform:translateY(0);}
+      50%{transform:translateY(-8px);}
+      100%{transform:translateY(0);}
+    }
+    @keyframes iconBounce{
+      0%,100%{transform:scale(1) rotate(0deg);}
+      25%{transform:scale(1.1) rotate(5deg);}
+      75%{transform:scale(0.95) rotate(-3deg);}
+    }
+    @keyframes inputPulse{
+      0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,0.4);}
+      50%{box-shadow:0 0 0 8px rgba(10,132,255,0);}
+    }
+    @keyframes modalEntrance{
+      0%{opacity:0;transform:scale(0.8) translateY(30px);}
+      60%{transform:scale(1.05) translateY(-5px);}
+      100%{opacity:1;transform:scale(1) translateY(0);}
+    }
+    @keyframes buttonWave{
+      0%{box-shadow:inset 0 0 0 0 rgba(255,255,255,0.5);}
+      100%{box-shadow:inset 0 0 0 60px rgba(255,255,255,0);}
+    }
+    @keyframes progressWave{
+      0%{background-position:-200% center;}
+      100%{background-position:200% center;}
+    }
+    @keyframes sectorDot{
+      0%{transform:scale(1) rotate(0deg);}
+      50%{transform:scale(1.2) rotate(180deg);}
+      100%{transform:scale(1) rotate(360deg);}
+    }
+    @keyframes textShadowGlow{
+      0%,100%{text-shadow:0 0 10px rgba(10,132,255,0.3);}
+      50%{text-shadow:0 0 30px rgba(10,132,255,0.7),0 0 60px rgba(191,90,242,0.4);}
+    }
+    @keyframes slideInWithBounce{
+      0%{opacity:0;transform:translateX(-50px) scale(0.8);}
+      60%{transform:translateX(10px) scale(1.05);}
+      100%{opacity:1;transform:translateX(0) scale(1);}
+    }
+    @keyframes fadeInUp2{
+      0%{opacity:0;transform:translateY(40px) scale(0.9);}
+      100%{opacity:1;transform:translateY(0) scale(1);}
+    }
+    @keyframes circleExpand{
+      0%{transform:scale(0.8);opacity:0.8;}
+      50%{transform:scale(1.05);opacity:1;}
+      100%{transform:scale(1);opacity:1;}
+    }
+    @keyframes successPop{
+      0%{transform:scale(0) rotate(-180deg);opacity:0;}
+      50%{transform:scale(1.15) rotate(10deg);}
+      100%{transform:scale(1) rotate(0deg);opacity:1;}
+    }
+    @keyframes chipSpin{
+      0%{transform:rotate(0deg);}
+      100%{transform:rotate(360deg);}
     }
     @keyframes glassRipple{
       0%{transform:scale(0.6);opacity:0.6;}
@@ -859,7 +931,7 @@
     .logo-wrap .logo{margin:0;position:relative;z-index:1;}
 
     /* Enhanced input focused state shimmer */
-    input:focus{animation:inputGlow 2s ease-in-out infinite;}
+    input:focus{animation:inputGlow 2s ease-in-out infinite,inputPulse 2s ease-in-out infinite;}
 
     /* Extra shimmer on sun button */
     .sun{animation:floatBubble 6s ease-in-out infinite,sunSpin 12s ease-in-out infinite;}
