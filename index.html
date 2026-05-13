@@ -1624,18 +1624,17 @@
 
           const captured=Object.keys(ang).length;
           const p=Math.min(100,Math.floor(captured/SECTORS*100));
-          document.getElementById('bar').style.width=p+'%';
-          document.getElementById('num').textContent=p+'%';
+          if(enrollCache.bar)enrollCache.bar.style.width=p+'%';
+          if(enrollCache.num)enrollCache.num.textContent=p+'%';
 
-          document.querySelectorAll('.sector-dot').forEach((dot,i)=>{
+          enrollCache.dots.forEach((dot,i)=>{
             dot.classList.toggle('captured',!!ang[i*45]);
           });
 
-          const tip=document.getElementById('enrollTip');
-          if(tip){
-            if(captured>=SECTORS)tip.textContent='✓ Blink to complete!';
-            else if(captured>=4)tip.textContent=`${captured}/${SECTORS} angles · keep moving`;
-            else tip.textContent='Move head slowly in a circle';
+          if(enrollCache.enrollTip){
+            if(captured>=SECTORS)enrollCache.enrollTip.textContent='✓ Blink to complete!';
+            else if(captured>=4)enrollCache.enrollTip.textContent=`${captured}/${SECTORS} angles · keep moving`;
+            else enrollCache.enrollTip.textContent='Move head slowly in a circle';
           }
 
           if(captured>=6&&blink>0){
@@ -1653,7 +1652,7 @@
             if(dd<best.dist){best.name=nm;best.dist=dd;}
           }
           const conf=Math.max(0,Math.min(100,100-(best.dist*50)));
-          document.getElementById('conf-num').textContent=Math.round(conf)+'%';
+          if(loginCache.confNum)loginCache.confNum.textContent=Math.round(conf)+'%';
           if(best.dist<.58&&blink>1){
             if(lr===best.name)rc++;else{lr=best.name;rc=1;blink=0;}
             if(rc>=3){m=MODE.IDLE;show_ok(`Welcome ${best.name}! ✓`);lr=null;rc=0;}
@@ -1678,6 +1677,7 @@
       prevEyes=curr;
     }
 
+    let enrollCache={};
     function enroll(){
       n=document.getElementById('name').value.trim();
       if(!n){set_msg('❌ Please enter your name');return;}
@@ -1687,14 +1687,17 @@
       document.getElementById('sectorPreview').innerHTML=Array(SECTORS).fill('<div class="sector-dot"></div>').join('');
       document.getElementById('form').classList.add('hidden');
       document.getElementById('enroll').classList.remove('hidden');
+      enrollCache={bar:document.getElementById('bar'),num:document.getElementById('num'),enrollTip:document.getElementById('enrollTip'),dots:document.querySelectorAll('.sector-dot')};
       set_msg('👤 Center face · move in circle · blink');
     }
 
+    let loginCache={};
     function login(){
       if(failCnt>=FAIL_MAX){set_msg('🔒 Locked (too many attempts)');return;}
       m=MODE.LOGIN;blink=0;rc=0;
       document.getElementById('form').classList.add('hidden');
       document.getElementById('lgn').classList.remove('hidden');
+      loginCache={confNum:document.getElementById('conf-num')};
       set_msg('👁️ Look at camera & blink twice');
     }
 
@@ -1849,8 +1852,13 @@
       }catch{alert('❌ Invalid code');}
     }
 
+    let statsCache={faces:0,logins:0};
+    function updateStatsCache(){
+      statsCache={faces:Object.keys(u).length,logins:parseInt(localStorage.getItem('logins')||'0')};
+    }
     function show_stats(){
-      const faces=Object.keys(u).length,logins=parseInt(localStorage.getItem('logins')||'0');
+      updateStatsCache();
+      const {faces,logins}=statsCache;
       const ua=navigator.userAgent;
       let device='Desktop';
       if(/iPhone/.test(ua))device='iPhone';else if(/iPad/.test(ua))device='iPad';else if(/Android/.test(ua))device='Android';
