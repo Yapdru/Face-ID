@@ -991,8 +991,10 @@
 
     function set_msg(text){
       const m=document.getElementById('msg');
-      const isLoading=text.includes('⚙️')||text.includes('🎥')||text.includes('📷');
+      const isLoading=text.includes('⚙️')||text.includes('🎥')||text.includes('📷')||text.includes('🔄');
       m.innerHTML=isLoading?`<span class="loading"></span>${text}`:text;
+      m.style.animation='none';
+      setTimeout(()=>m.style.animation='',10);
     }
 
     function upd(){
