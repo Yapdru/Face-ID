@@ -1332,7 +1332,7 @@
 
   <div class="version-badge">v40</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js" onload="console.log('Face API loaded')" onerror="console.error('Face API failed to load')"></script>
   <script>
     if(!window.requestIdleCallback){
       window.requestIdleCallback=function(cb){
@@ -1506,6 +1506,10 @@
     }
 
     async function load_mod(){
+      if(!window.faceapi){
+        set_msg('❌ Face API not loaded');
+        return;
+      }
       let retries=0;
       const attempt=async()=>{
         try{
@@ -1521,6 +1525,7 @@
           ]);
           set_msg('✓ Ready!');modelLoaded=true;d=1;rid=requestAnimationFrame(loop);
         }catch(err){
+          console.error('Model load error:',err);
           retries++;
           if(retries<=3)setTimeout(attempt,1500);
           else set_msg('❌ Load failed');
@@ -1568,32 +1573,6 @@
       }
       x.restore();
 
-      if(noseX!==undefined){
-        const dist=Math.sqrt((noseX-cx)**2+(noseY-cy)**2);
-        const centered=dist<=CONFIG.CENTER_THRESHOLD;
-        const progress=Math.max(0,1-(dist/CONFIG.CENTER_THRESHOLD));
-
-        x.beginPath();
-        x.arc(noseX,noseY,centered?16:12,0,Math.PI*2);
-        x.fillStyle=centered?'rgba(48,209,88,0.8)':'rgba(255,200,50,0.75)';
-        x.fill();
-        x.strokeStyle='rgba(255,255,255,0.95)';
-        x.lineWidth=2.5;
-        x.stroke();
-
-        if(centered){
-          x.beginPath();
-          x.arc(noseX,noseY,28,0,Math.PI*2*progress);
-          x.strokeStyle='rgba(48,209,88,0.5)';
-          x.lineWidth=4;
-          x.stroke();
-          x.beginPath();
-          x.arc(noseX,noseY,24,0,Math.PI*2);
-          x.strokeStyle='rgba(48,209,88,0.2)';
-          x.lineWidth=1;
-          x.stroke();
-        }
-      }
     }
 
     async function detect(){
@@ -1625,7 +1604,7 @@
           const dx=nose.x-cx,dy=nose.y-cy;
           const dist=Math.sqrt(dx*dx+dy*dy);
 
-          drawFaceGuide(nose.x,nose.y);
+          drawFaceGuide();
 
           if(dist<=CONFIG.CENTER_THRESHOLD){
             qc++;
