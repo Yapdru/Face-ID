@@ -321,11 +321,12 @@
     .subtitle{
       font-size:0.88rem;
       background:linear-gradient(90deg,rgba(10,132,255,0.85),rgba(191,90,242,0.85),rgba(48,209,88,0.85));
-      background-size:200% 200%;
+      background-size:300% 300%;
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-      animation:prismShift 4s ease-in-out infinite;
+      animation:prismShift 3s ease-in-out infinite,shimmerText 5s linear infinite;
       font-weight:600;
       letter-spacing:0.3px;
+      filter:drop-shadow(0 0 6px rgba(10,132,255,0.2));
     }
 
     /* ── BUTTONS ── */
@@ -515,7 +516,13 @@
       box-shadow:0 6px 20px rgba(10,132,255,0.18),inset 0 1px 0 rgba(255,255,255,0.12);
     }
     .menu-item:active{transform:translateX(10px) scale(0.97);}
-    .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);margin:6px 0;}
+    .divider{
+      height:1px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
+      background-size:200% 100%;
+      margin:6px 0;
+      animation:glassShine 4s ease-in-out infinite;
+    }
 
     /* ── VIDEO / CAMERA ── */
     #videoWrap{
