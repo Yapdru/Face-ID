@@ -852,8 +852,9 @@
   <div id="helpModal" class="modal" role="dialog">
     <div class="box">
       <h2>❓ Quick Help</h2>
-      <p><strong>Enroll:</strong> Center face, hold steady, rotate</p>
-      <p><strong>Login:</strong> Look at camera, blink once</p>
+      <p><strong>Enroll:</strong> Center face, hold steady, rotate to 4 angles</p>
+      <p><strong>Login:</strong> Look at camera, blink once to verify</p>
+      <p style="font-size:0.85rem;color:#999;margin-top:12px;">⌨️ Shortcuts: Esc=Close, ⌘E=Export, ⌘I=Import, ⌘S=Stats</p>
       <button class="btn-sec" onclick="close_m()">Close</button>
     </div>
   </div>
@@ -939,6 +940,15 @@
     document.addEventListener('click',e=>{
       if(!e.target.closest('#sun')&&!e.target.closest('#menu')){
         close_m();
+      }
+    });
+
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape')close_m();
+      if(e.ctrlKey||e.metaKey){
+        if(e.key==='e')exp();
+        if(e.key==='i')imp();
+        if(e.key==='s')show_stats();
       }
     });
 
