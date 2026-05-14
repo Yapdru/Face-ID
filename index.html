@@ -1590,92 +1590,36 @@
       }
     }
 
-    function detect(){
+    async function detect(){
       if(!v||v.readyState<2||!modelLoaded)return;
-      (async()=>{
-        try{
-          const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:.3});
-          const dets=await faceapi.detectAllFaces(v,opts).withFaceLandmarks().withFaceDescriptors();
-
-        if(m!==MODE.ENROLL&&m!==MODE.LOGIN){
-          x.clearRect(0,0,c.width,c.height);
-          return;
-        }
-
-        if(m===MODE.ENROLL){
-          if(!dets.length){drawFaceGuide();return;}
-        }else{
-          x.clearRect(0,0,c.width,c.height);
-        }
-
-        if(!dets[0]||!dets[0].descriptor||dets[0].descriptor.length!==128)return;
-
+      try{
+        const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:.3});
+        const dets=await faceapi.detectAllFaces(v,opts).withFaceLandmarks().withFaceDescriptors();
+        if(m!==MODE.ENROLL&&m!==MODE.LOGIN){x.clearRect(0,0,c.width,c.height);return;}
+        if(!dets.length){if(m===MODE.ENROLL)drawFaceGuide();else x.clearRect(0,0,c.width,c.height);return;}
+        if(!dets[0]?.descriptor||dets[0].descriptor.length!==128)return;
         const {descriptor,landmarks}=dets[0];
         chk_blink(landmarks);
-
         if(m===MODE.ENROLL){
           const nose=landmarks.getNose()[3];
-          const cx=c.width/2,cy=c.height/2;
-          const dx=nose.x-cx,dy=nose.y-cy;
-          const dist=Math.sqrt(dx*dx+dy*dy);
-
+          const cx=c.width/2,cy=c.height/2,dx=nose.x-cx,dy=nose.y-cy,dist=Math.sqrt(dx*dx+dy*dy);
           drawFaceGuide(nose.x,nose.y);
-
-          if(dist<=CONFIG.CENTER_THRESHOLD){
-            qc++;
-            if(qc>=2){
-              const raw=Math.round(Math.atan2(dy,dx)*180/Math.PI/45)*45;
-              const key=(raw+360)%360;
-              if(!ang[key]){ang[key]=true;}
-            }
-          }else{qc=0;}
-
-          const captured=Object.keys(ang).length;
-          const p=Math.min(100,Math.floor(captured/SECTORS*100));
+          if(dist<=CONFIG.CENTER_THRESHOLD){qc++;if(qc>=2){const key=(Math.round(Math.atan2(dy,dx)*180/Math.PI/45)*45+360)%360;if(!ang[key])ang[key]=true;}}else qc=0;
+          const captured=Object.keys(ang).length,p=Math.min(100,Math.floor(captured/SECTORS*100));
           if(enrollCache.bar)enrollCache.bar.style.width=p+'%';
           if(enrollCache.num)enrollCache.num.textContent=p+'%';
-
-          if(enrollCache.dots.length){
-            enrollCache.dots.forEach((dot,i)=>dot.classList.toggle('captured',!!ang[i*45]));
-          }
-
-          if(enrollCache.enrollTip){
-            if(captured>=SECTORS)enrollCache.enrollTip.textContent='✓ All angles captured!';
-            else if(captured>=4)enrollCache.enrollTip.textContent=`${captured}/${SECTORS} · keep moving head`;
-            else enrollCache.enrollTip.textContent='Move head slowly in a big circle';
-          }
-
-          /* auto-complete at 6+ sectors — no blink required */
-          if(captured>=6){
-            u[n]={descriptor:Array.from(descriptor),enrolled:new Date().toISOString(),angles:Object.keys(ang)};
-            save();m=MODE.IDLE;e=0;blink=0;ang={};
-            x.clearRect(0,0,c.width,c.height);
-            show_ok(`${n} enrolled! ✓`);
-          }
-
+          if(enrollCache.dots.length)enrollCache.dots.forEach((dot,i)=>dot.classList.toggle('captured',!!ang[i*45]));
+          if(enrollCache.enrollTip)enrollCache.enrollTip.textContent=captured>=SECTORS?'✓ All angles captured!':captured>=4?`${captured}/${SECTORS} · keep moving`:'Move head in circle';
+          if(captured>=6){u[n]={descriptor:Array.from(descriptor),enrolled:new Date().toISOString(),angles:Object.keys(ang)};save();m=MODE.IDLE;e=0;blink=0;ang={};x.clearRect(0,0,c.width,c.height);show_ok(`${n} enrolled! ✓`);}
         }else if(m===MODE.LOGIN){
           let best={name:null,dist:Infinity};
-          for(const [nm,data]of Object.entries(u)){
-            if(!data.descriptor||data.descriptor.length!==128)continue;
-            const dd=faceapi.euclideanDistance(descriptor,data.descriptor);
-            if(dd<best.dist){best.name=nm;best.dist=dd;}
-          }
-          const conf=Math.max(0,Math.min(100,100-(best.dist*50)));
-          if(loginCache.confNum)loginCache.confNum.textContent=Math.round(conf)+'%';
-          if(best.dist<.62&&blink>0){
-            if(lr===best.name)rc++;else{lr=best.name;rc=1;blink=0;}
-            if(rc>=2){m=MODE.IDLE;show_ok(`Welcome ${best.name}! ✓`);lr=null;rc=0;}
-          }else{
-            if(best.dist>=.62){
-              if(blink>0){failCnt++;blink=0;}
-              if(failCnt>=FAIL_MAX)set_msg('🔒 Locked (too many failed attempts)');
-              else set_msg(`❌ Not recognized (${FAIL_MAX-failCnt} left) — blink and look straight`);
-            }
-            if(best.dist>=.62||blink<1){lr=null;rc=0;}
-          }
+          for(const [nm,data]of Object.entries(u)){if(!data.descriptor||data.descriptor.length!==128)continue;const dd=faceapi.euclideanDistance(descriptor,data.descriptor);if(dd<best.dist){best.name=nm;best.dist=dd;}}
+          const conf=Math.round(Math.max(0,Math.min(100,100-(best.dist*50))));
+          if(loginCache.confNum)loginCache.confNum.textContent=conf+'%';
+          if(best.dist<.62&&blink>0){if(lr===best.name)rc++;else{lr=best.name;rc=1;blink=0;}if(rc>=2){m=MODE.IDLE;show_ok(`Welcome ${best.name}! ✓`);lr=null;rc=0;}}
+          else{if(best.dist>=.62&&blink>0){failCnt++;blink=0;if(failCnt>=FAIL_MAX)set_msg('🔒 Locked');else set_msg(`❌ Not recognized (${FAIL_MAX-failCnt} left)`);}if(best.dist>=.62)lr=null,rc=0;}
         }
-      }catch(err){console.error(err);}
-      })();
+      }catch(e){console.error(e);}
     }
 
     function chk_blink(lm){
