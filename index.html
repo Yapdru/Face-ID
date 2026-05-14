@@ -1400,7 +1400,9 @@
       xp=parseInt(localStorage.getItem('xp')||'0');
       achievements=JSON.parse(localStorage.getItem('achievements')||'{}');
       loadStreak();checkAchievements();upd();pins();
-      if(!Object.keys(u).length)setTimeout(()=>{start();document.getElementById('name').focus()},300);
+      setTimeout(()=>{
+        if(!Object.keys(u).length){start();document.getElementById('name').focus();}
+      },500);
       // logo click easter egg
       document.getElementById('logoBtn').addEventListener('click',()=>{
         const logo=document.getElementById('logoBtn');
@@ -1498,44 +1500,36 @@
         document.getElementById('videoWrap').style.display='block';
         document.getElementById('main').classList.remove('hidden');
         v.onloadedmetadata=()=>{
-          c.width=v.videoWidth||640;
-          c.height=v.videoHeight||480;
-          load_mod();
-        };
-        v.onplay=()=>{
-          if(!c.width){c.width=v.videoWidth||640;c.height=v.videoHeight||480;}
+          c.width=v.videoWidth||640;c.height=v.videoHeight||480;
+          setTimeout(load_mod,300);
         };
       }catch(err){set_msg('❌ Camera unavailable');}
     }
 
     async function load_mod(){
-      if(!window.faceapi){set_msg('❌ Face API failed to load — try refreshing');return;}
+      if(!window.faceapi){set_msg('❌ Face API not loaded');return;}
       let retries=0;
-      const URLS=[
-        'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/',
-        'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1/model/'
-      ];
-      const attempt=async()=>{
+      while(retries<=4){
         try{
-          set_msg('⚙️ Loading AI models...');
-          const url=URLS[retries%URLS.length];
+          set_msg('⚙️ Loading models...');
+          const URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
           await Promise.race([
             Promise.all([
-              faceapi.nets.tinyFaceDetector.loadFromUri(url),
-              faceapi.nets.faceLandmark68Net.loadFromUri(url),
-              faceapi.nets.faceRecognitionNet.loadFromUri(url)
+              faceapi.nets.tinyFaceDetector.loadFromUri(URL),
+              faceapi.nets.faceLandmark68Net.loadFromUri(URL),
+              faceapi.nets.faceRecognitionNet.loadFromUri(URL)
             ]),
-            new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),30000))
+            new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),25000))
           ]);
-          set_msg('✓ Ready! Enter your name and tap Enroll.');
+          set_msg('✓ Ready!');
           modelLoaded=true;d=1;rid=requestAnimationFrame(loop);
+          return;
         }catch(err){
           retries++;
-          if(retries<=4){set_msg(`⚙️ Retrying models (${retries}/4)...`);setTimeout(attempt,2000);}
-          else set_msg('❌ Models failed — check connection & refresh');
+          if(retries<=4){set_msg(`⚙️ Retry ${retries}...`);await new Promise(r=>setTimeout(r,1500));}
         }
-      };
-      attempt();
+      }
+      set_msg('❌ Models failed');
     }
 
     function loop(ts){
