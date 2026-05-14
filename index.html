@@ -1509,29 +1509,30 @@
     }
 
     async function load_mod(){
-      if(!window.faceapi){
-        set_msg('❌ Face API not loaded');
-        return;
-      }
+      if(!window.faceapi){set_msg('❌ Face API failed to load — try refreshing');return;}
       let retries=0;
+      const URLS=[
+        'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/',
+        'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1/model/'
+      ];
       const attempt=async()=>{
         try{
-          set_msg('⚙️ Loading models...');
-          const URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+          set_msg('⚙️ Loading AI models...');
+          const url=URLS[retries%URLS.length];
           await Promise.race([
             Promise.all([
-              faceapi.nets.tinyFaceDetector.loadFromUri(URL),
-              faceapi.nets.faceLandmark68Net.loadFromUri(URL),
-              faceapi.nets.faceRecognitionNet.loadFromUri(URL)
+              faceapi.nets.tinyFaceDetector.loadFromUri(url),
+              faceapi.nets.faceLandmark68Net.loadFromUri(url),
+              faceapi.nets.faceRecognitionNet.loadFromUri(url)
             ]),
-            new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),15000))
+            new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),30000))
           ]);
-          set_msg('✓ Ready!');modelLoaded=true;d=1;rid=requestAnimationFrame(loop);
+          set_msg('✓ Ready! Enter your name and tap Enroll.');
+          modelLoaded=true;d=1;rid=requestAnimationFrame(loop);
         }catch(err){
-          console.error('Model load error:',err);
           retries++;
-          if(retries<=3)setTimeout(attempt,1500);
-          else set_msg('❌ Load failed');
+          if(retries<=4){set_msg(`⚙️ Retrying models (${retries}/4)...`);setTimeout(attempt,2000);}
+          else set_msg('❌ Models failed — check connection & refresh');
         }
       };
       attempt();
@@ -1543,60 +1544,72 @@
       rid=requestAnimationFrame(loop);
     }
 
-    /* iPhone-style oval face guide */
-    function drawFaceGuide(){
-      if(!c||!x)return;
+    /* iPhone-style oval face guide with nose dot */
+    function drawFaceGuide(noseX,noseY){
+      if(!c||!x||!c.width||!c.height)return;
       x.clearRect(0,0,c.width,c.height);
       const cx=c.width/2,cy=c.height/2;
-      const ry=Math.min(c.width,c.height)*0.38;
-      const rx=ry*0.72;
+      const ry=Math.min(c.width,c.height)*0.4;
+      const rx=ry*0.7;
       const gap=0.10;
 
       for(let i=0;i<SECTORS;i++){
         const startA=(i/SECTORS)*Math.PI*2-Math.PI/2+gap;
         const endA=((i+1)/SECTORS)*Math.PI*2-Math.PI/2-gap;
         const captured=!!ang[i*45];
-
         x.save();
         x.translate(cx,cy);
         x.scale(rx/ry,1);
         x.beginPath();
         x.arc(0,0,ry,startA,endA);
-        x.restore();
-
-        x.lineWidth=captured?7:3;
+        x.lineWidth=(captured?8:3)*(ry/rx);
         x.lineCap='round';
         if(captured){
           x.strokeStyle='#30d158';
-          x.shadowColor='rgba(48,209,88,0.9)';
-          x.shadowBlur=20;
+          x.shadowColor='rgba(48,209,88,1)';
+          x.shadowBlur=22;
         }else{
-          x.strokeStyle='rgba(255,255,255,0.5)';
+          x.strokeStyle='rgba(255,255,255,0.55)';
           x.shadowBlur=0;
         }
         x.stroke();
+        x.restore();
+      }
+
+      /* nose dot — green when centered, yellow when off */
+      if(noseX!==undefined&&noseY!==undefined){
+        const dist=Math.sqrt((noseX-cx)**2+(noseY-cy)**2);
+        const centered=dist<=CONFIG.CENTER_THRESHOLD;
+        x.beginPath();
+        x.arc(noseX,noseY,centered?13:9,0,Math.PI*2);
+        x.fillStyle=centered?'rgba(48,209,88,0.85)':'rgba(255,200,50,0.8)';
+        x.shadowColor=centered?'rgba(48,209,88,0.9)':'rgba(255,200,50,0.7)';
+        x.shadowBlur=16;
+        x.fill();
         x.shadowBlur=0;
+        x.strokeStyle='rgba(255,255,255,0.9)';
+        x.lineWidth=2;
+        x.stroke();
       }
     }
 
     async function detect(){
       if(!v||v.readyState<2||!modelLoaded)return;
       try{
-        const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:.48});
+        const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:.3});
         const dets=await faceapi.detectAllFaces(v,opts).withFaceLandmarks().withFaceDescriptors();
 
+        if(m!==MODE.ENROLL&&m!==MODE.LOGIN){
+          x.clearRect(0,0,c.width,c.height);
+          return;
+        }
+
         if(m===MODE.ENROLL){
-          if(!dets.length){
-            drawFaceGuide();
-            return;
-          }
+          if(!dets.length){drawFaceGuide();return;}
         }else{
           x.clearRect(0,0,c.width,c.height);
         }
 
-        if(!dets.length){
-          return;
-        }
         if(!dets[0]||!dets[0].descriptor||dets[0].descriptor.length!==128)return;
 
         const {descriptor,landmarks}=dets[0];
@@ -1608,7 +1621,7 @@
           const dx=nose.x-cx,dy=nose.y-cy;
           const dist=Math.sqrt(dx*dx+dy*dy);
 
-          drawFaceGuide();
+          drawFaceGuide(nose.x,nose.y);
 
           if(dist<=CONFIG.CENTER_THRESHOLD){
             qc++;
@@ -1624,17 +1637,18 @@
           if(enrollCache.bar)enrollCache.bar.style.width=p+'%';
           if(enrollCache.num)enrollCache.num.textContent=p+'%';
 
-          enrollCache.dots.forEach((dot,i)=>{
-            dot.classList.toggle('captured',!!ang[i*45]);
-          });
-
-          if(enrollCache.enrollTip){
-            if(captured>=SECTORS)enrollCache.enrollTip.textContent='✓ Blink to complete!';
-            else if(captured>=4)enrollCache.enrollTip.textContent=`${captured}/${SECTORS} angles · keep moving`;
-            else enrollCache.enrollTip.textContent='Move head slowly in a circle';
+          if(enrollCache.dots.length){
+            enrollCache.dots.forEach((dot,i)=>dot.classList.toggle('captured',!!ang[i*45]));
           }
 
-          if(captured>=6&&blink>0){
+          if(enrollCache.enrollTip){
+            if(captured>=SECTORS)enrollCache.enrollTip.textContent='✓ All angles captured!';
+            else if(captured>=4)enrollCache.enrollTip.textContent=`${captured}/${SECTORS} · keep moving head`;
+            else enrollCache.enrollTip.textContent='Move head slowly in a big circle';
+          }
+
+          /* auto-complete at 6+ sectors — no blink required */
+          if(captured>=6){
             u[n]={descriptor:Array.from(descriptor),enrolled:new Date().toISOString(),angles:Object.keys(ang)};
             save();m=MODE.IDLE;e=0;blink=0;ang={};
             x.clearRect(0,0,c.width,c.height);
@@ -1650,16 +1664,16 @@
           }
           const conf=Math.max(0,Math.min(100,100-(best.dist*50)));
           if(loginCache.confNum)loginCache.confNum.textContent=Math.round(conf)+'%';
-          if(best.dist<.58&&blink>1){
+          if(best.dist<.62&&blink>0){
             if(lr===best.name)rc++;else{lr=best.name;rc=1;blink=0;}
-            if(rc>=3){m=MODE.IDLE;show_ok(`Welcome ${best.name}! ✓`);lr=null;rc=0;}
+            if(rc>=2){m=MODE.IDLE;show_ok(`Welcome ${best.name}! ✓`);lr=null;rc=0;}
           }else{
-            if(best.dist>=.58){
-              if(blink>0)failCnt++;
+            if(best.dist>=.62){
+              if(blink>0){failCnt++;blink=0;}
               if(failCnt>=FAIL_MAX)set_msg('🔒 Locked (too many failed attempts)');
-              else set_msg(`❌ Not recognized (${FAIL_MAX-failCnt} attempts left)`);
+              else set_msg(`❌ Not recognized (${FAIL_MAX-failCnt} left) — blink and look straight`);
             }
-            if(best.dist>=.58||blink<1){lr=null;rc=0;}
+            if(best.dist>=.62||blink<1){lr=null;rc=0;}
           }
         }
       }catch(err){console.error(err);}
@@ -1670,7 +1684,7 @@
       const oL=Math.hypot(l[1].y-l[4].y,l[1].x-l[4].x);
       const oR=Math.hypot(r[1].y-r[4].y,r[1].x-r[4].x);
       const curr=oL+oR;
-      if(curr/Math.max(prevEyes,.1)<.5)blink++;
+      if(prevEyes>0&&curr/prevEyes<0.38)blink++;
       prevEyes=curr;
     }
 

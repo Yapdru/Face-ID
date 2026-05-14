@@ -1,4 +1,4 @@
-const CACHE_NAME = 'face-id-v16';
+const CACHE_NAME = 'face-id-v17';
 const ASSETS = ['index.html', 'manifest.json'];
 const CDN_TIMEOUT = 5000;
 
