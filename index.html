@@ -1540,7 +1540,7 @@
 
     function loop(ts){
       if(!d)return;
-      if(ts-ldt>=INT){ldt=ts;requestIdleCallback(detect,{timeout:100});}
+      if(ts-ldt>=INT){ldt=ts;detect();}
       rid=requestAnimationFrame(loop);
     }
 
@@ -1549,55 +1549,53 @@
       if(!c||!x||!c.width||!c.height)return;
       x.clearRect(0,0,c.width,c.height);
       const cx=c.width/2,cy=c.height/2;
-      const ry=Math.min(c.width,c.height)*0.4;
-      const rx=ry*0.7;
-      const gap=0.10;
+      const ry=Math.min(c.width,c.height)*0.38;
+      const rx=ry*0.68;
 
+      /* draw 8 oval sectors */
       for(let i=0;i<SECTORS;i++){
-        const startA=(i/SECTORS)*Math.PI*2-Math.PI/2+gap;
-        const endA=((i+1)/SECTORS)*Math.PI*2-Math.PI/2-gap;
+        const angle=(i/SECTORS)*Math.PI*2-Math.PI/2;
+        const nextAngle=((i+1)/SECTORS)*Math.PI*2-Math.PI/2;
         const captured=!!ang[i*45];
-        x.save();
-        x.translate(cx,cy);
-        x.scale(rx/ry,1);
+
         x.beginPath();
-        x.arc(0,0,ry,startA,endA);
-        x.lineWidth=(captured?8:3)*(ry/rx);
+        x.ellipse(cx,cy,rx,ry,0,angle,nextAngle);
+        x.lineWidth=captured?6:2.5;
         x.lineCap='round';
+        x.strokeStyle=captured?'#30d158':'rgba(255,255,255,0.5)';
         if(captured){
-          x.strokeStyle='#30d158';
-          x.shadowColor='rgba(48,209,88,1)';
-          x.shadowBlur=22;
-        }else{
-          x.strokeStyle='rgba(255,255,255,0.55)';
-          x.shadowBlur=0;
+          x.shadowColor='rgba(48,209,88,0.9)';
+          x.shadowBlur=18;
         }
         x.stroke();
-        x.restore();
+        x.shadowBlur=0;
       }
 
       /* nose dot — green when centered, yellow when off */
       if(noseX!==undefined&&noseY!==undefined){
         const dist=Math.sqrt((noseX-cx)**2+(noseY-cy)**2);
         const centered=dist<=CONFIG.CENTER_THRESHOLD;
+        const dotSize=centered?12:8;
+
         x.beginPath();
-        x.arc(noseX,noseY,centered?13:9,0,Math.PI*2);
+        x.arc(noseX,noseY,dotSize,0,Math.PI*2);
         x.fillStyle=centered?'rgba(48,209,88,0.85)':'rgba(255,200,50,0.8)';
-        x.shadowColor=centered?'rgba(48,209,88,0.9)':'rgba(255,200,50,0.7)';
-        x.shadowBlur=16;
+        x.shadowColor=centered?'rgba(48,209,88,0.8)':'rgba(255,200,50,0.6)';
+        x.shadowBlur=14;
         x.fill();
         x.shadowBlur=0;
-        x.strokeStyle='rgba(255,255,255,0.9)';
+        x.strokeStyle='white';
         x.lineWidth=2;
         x.stroke();
       }
     }
 
-    async function detect(){
+    function detect(){
       if(!v||v.readyState<2||!modelLoaded)return;
-      try{
-        const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:.3});
-        const dets=await faceapi.detectAllFaces(v,opts).withFaceLandmarks().withFaceDescriptors();
+      (async()=>{
+        try{
+          const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:.3});
+          const dets=await faceapi.detectAllFaces(v,opts).withFaceLandmarks().withFaceDescriptors();
 
         if(m!==MODE.ENROLL&&m!==MODE.LOGIN){
           x.clearRect(0,0,c.width,c.height);
@@ -1677,6 +1675,7 @@
           }
         }
       }catch(err){console.error(err);}
+      })();
     }
 
     function chk_blink(lm){
