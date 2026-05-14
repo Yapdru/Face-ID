@@ -1391,7 +1391,7 @@
     }
 
     window.addEventListener('DOMContentLoaded',()=>{
-      if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+      if('serviceWorker'in navigator&&false)navigator.serviceWorker.register('sw.js').catch(()=>{});
       u=JSON.parse(localStorage.getItem('u')||'{}');
       pin=localStorage.getItem('p')||'';
       const w=localStorage.getItem('w');if(w)wa=w;
