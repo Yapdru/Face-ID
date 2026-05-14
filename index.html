@@ -1603,8 +1603,8 @@
           if(enrollCache.bar)enrollCache.bar.style.width=p+'%';
           if(enrollCache.num)enrollCache.num.textContent=p+'%';
           if(enrollCache.dots.length)enrollCache.dots.forEach((dot,i)=>dot.classList.toggle('captured',!!ang[i*45]));
-          if(enrollCache.enrollTip)enrollCache.enrollTip.textContent=captured>=SECTORS?'✓ All angles captured!':captured>=4?`${captured}/${SECTORS} · keep moving`:'Move head in circle';
-          if(captured>=6){u[n]={descriptor:Array.from(descriptor),enrolled:new Date().toISOString(),angles:Object.keys(ang)};save();m=MODE.IDLE;e=0;blink=0;ang={};x.clearRect(0,0,c.width,c.height);show_ok(`${n} enrolled! ✓`);}
+          if(enrollCache.enrollTip)enrollCache.enrollTip.textContent=captured>=SECTORS?'✓ Completed!':captured>=4?`${captured}/${SECTORS} · keep moving`:'Move head in circle';
+          if(captured>=SECTORS){u[n]={descriptor:Array.from(descriptor),enrolled:new Date().toISOString(),angles:Object.keys(ang)};save();m=MODE.IDLE;e=0;blink=0;ang={};x.clearRect(0,0,c.width,c.height);show_ok(`${n} enrolled! ✓`);}
         }else if(m===MODE.LOGIN){
           let best={name:null,dist:Infinity};
           for(const [nm,data]of Object.entries(u)){if(!data.descriptor||data.descriptor.length!==128)continue;const dd=faceapi.euclideanDistance(descriptor,data.descriptor);if(dd<best.dist){best.name=nm;best.dist=dd;}}
